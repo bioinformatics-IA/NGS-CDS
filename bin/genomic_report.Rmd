@@ -1,0 +1,219 @@
+---
+title: "NGS-CDS Variant Calling Evaluation Short Report"
+subtitle: "Downstream Narrative Interpretation of Variant Annotations"
+author: "Ms. Iffat Anjum"
+date: "`r Sys.Date()`"
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    highlight: tango
+    keep_tex: false
+header-includes:
+  - \usepackage{pdflscape}
+params:
+  rdata_path: ""
+  lib_path: ""
+---
+
+```{r setup, include=FALSE}
+
+if (params$lib_path != "" && dir.exists(params$lib_path)) {
+  .libPaths(c(params$lib_path, .libPaths()))
+}
+
+knitr::opts_chunk$set(
+  echo    = FALSE,
+  warning = FALSE,
+  message = FALSE
+)
+suppressPackageStartupMessages({
+  library(dplyr)
+  library(knitr)
+  library(scales)
+  library(tidyr)
+  library(kableExtra)
+})
+
+# Dynamic path tracking: Looks for the RData file where the script actually is
+data_path <- params$rdata_path
+
+if (data_path == "" || !file.exists(data_path)) {
+  stop(paste("Critical Error: Missing or invalid file path passed ->", data_path))
+}
+
+load(data_path)
+```
+
+```{r exec-summary}
+n_vars  <- nrow(df)
+n_genes <- dplyr::n_distinct(df$Gene_Name)
+```
+
+## Executive Summary
+
+The cohort comprises **`r total_patients`** unique baseline samples, with
+**`r n_vars`** annotated somatic variants spanning **`r n_genes`** distinct
+genes. This report consolidates downstream somatic variant data into three operational tiers: 
+*Sample-level burden*, *Gene-level driver penetrance*, and *Variant-level hotspot resolutions*.
+
+## Mutation Burden per Sample
+**Biological Context**: Identifies total tumor mutational burden (TMB) per patient using the global variant landscape. This allows rapid screening for hypermutated baseline samples or samples featuring mismatch repair deficiencies.
+*What is the Tumor Mutational Burden (TMB) across the cohort, and which patients are hypermutated?*
+
+```{r burden-table, fig.show="hold", out.width="50%"}
+# Display top 10 most mutated samples as a clear reference table
+knitr::kable(head(per_sample_count %>% arrange(desc(Mutation_Count)), 10), 
+             caption = "Top 10 Samples by Mutation Burden",
+             col.names = c("Sample", "Total Mutations"))
+
+knitr::include_graphics(file.path(plots_dir, "01-Per_sample_mutation_count.png"))
+knitr::include_graphics(file.path(plots_dir, "02-Mutation_burden_per_sample_line.png"))
+
+
+```
+
+## Heavily Mutated Genes (All Impacts Evaluated)
+**Biological Context:** Evaluates broad cohort penetrance at the gene level. The comparison reveals whether driver patterns are dominated by massive genes accumulating background passenger noise versus genuine disease drivers.
+**Unfiltered View:** Includes both coding, non-coding, and silent variations.
+**Filtered Coding View:** Focuses strictly on non-synonymous or functional alterations altering gene dynamics.
+
+*Which genes are the primary drivers or most frequently mutated across this disease cohort?*
+
+```{r penetrance-tables-split}
+# 1. Dynamically add present impacts to the penetrance aggregation view
+gene_impact_summary <- df %>%
+  group_by(Gene_Name) %>%
+  summarise(Impacts_Present = paste(sort(unique(Annotation_Impact)), collapse = ", "), .groups = 'drop')
+
+gene_penetrance_updated <- gene_penetrance %>%
+  left_join(gene_impact_summary, by = "Gene_Name")
+
+# 2. Generate Dataset Sorted by Cohort Penetrance (Sample Count)
+by_samples <- gene_penetrance_updated %>% 
+  arrange(desc(Mutated_Samples), desc(Total_Variants))
+
+# 3. Generate Dataset Sorted by Total Alterations Count
+by_alterations <- gene_penetrance_updated %>% 
+  arrange(desc(Total_Variants), desc(Mutated_Samples))
+```
+
+**Top Genes by Patient Penetrance**
+The table below highlights widespread prevalence, sorted primarily by *Mutated Samples*.
+```{r penetrance-tables-bysample}
+knitr::kable(head(by_samples, 15),
+             caption = "Top 15 Genes by Sample Penetrance (Widespread Prevalence)",
+             digits = 4,
+             col.names = c("Gene Symbol", "Mutated Samples", "Total Variants", "Impact Tiers Contained"))
+```
+**Top Genes by Total Alteration Burden**
+The table below highlights absolute mutational density, sorted primarily by Total Variants.
+```{r penetrance-tables-byvariant, fig.show="hold", out.width="50%"}
+knitr::kable(head(by_alterations, 15),
+             caption = "Top 15 Genes by Absolute Alteration Burden (Total Variants)",
+             digits = 4,
+             col.names = c("Gene Symbol", "Mutated Samples", "Total Variants", "Impact Tiers Contained"))
+
+knitr::include_graphics(file.path(plots_dir, "06-gene_prevalence_unfiltered.png"))
+knitr::include_graphics(file.path(plots_dir, "07-gene_prevalence_filtered_coding.png"))
+knitr::include_graphics(file.path(plots_dir, "16-coding_mutation_burden_per_gene.png"))
+```
+
+## Genomic Frequencies (All)
+**Biological Context:** Moves away from broad gene metrics to focus on point-specific base-pair mutations. High recurrence here reveals true positional nucleotide hotspots shared across distinct patients, pointing directly to potential gain-of-function mechanics.
+
+*Are there specific hotspot base-pair mutations shared across different patients?*
+
+```{r genomicfreq-table, fig.show="hold", out.width="50%"}
+genomic_freq_cleaned <- genomic_frequencies %>% 
+  arrange(desc(Sample_Count)) %>%
+  select(-contains("Pct"), -contains("Percentage")) %>% # Dynamically drops the percentage column
+  head(25)
+
+knitr::kable(genomic_freq_cleaned ,
+             format  = "latex",
+             caption = "Top 25 Hotspot Genomic Coordinates Sorted by Patient Count",
+             col.names = c("Mutation ID", "Gene", "Annotation", "Impact", "Patient Count")
+             )%>%
+ kable_styling(latex_options = c("scale_down", "hold_position"))
+
+
+knitr::include_graphics(file.path(plots_dir, "03-top_recurrent_all_mutations.png"))
+knitr::include_graphics(file.path(plots_dir, "04-top_recurrent_coding_mutations.png"))
+knitr::include_graphics(file.path(plots_dir, "05-top_recurrent_mutations_by_impact.png"))
+```
+
+## High and Moderate Functional Alterations Prevalence
+Biological Context: Filters out benign background variants and passenger noise. This segment isolates high/moderate impact variants that severely threaten physical protein assembly or transcription.
+
+*Which genes are harboring alterations that severely threaten protein structure, bypassing benign noise?*
+```{r impact-table, fig.show="hold", out.width="50%"}
+impact_wide <- high_impact %>%
+  pivot_wider(names_from  = Annotation_Impact,
+              values_from = Variant_Count,
+              values_fill  = 0)%>%
+  arrange(desc(HIGH)) %>% 
+  head(20)
+
+knitr::kable(
+  impact_wide,
+  caption = "Number of HIGH vs MODERATE impact variants per gene (Top 20)."
+)
+
+
+knitr::include_graphics(file.path(plots_dir, "14-high_moderate_impact_mutations.png"))
+knitr::include_graphics(file.path(plots_dir, "23-overall_mutation_impact.png"))
+```
+
+## Protein-Altering Variant Prevalence (Unfiltered)
+**Biological Context:** Captures the entire spectrum of amino-acid-level
+changes regardless of impact tier — including LOW and MODIFIER alterations
+that the downstream filtered view discards. This view is useful for
+identifying recurrent passenger proteins that nevertheless reach
+high carrier frequency across the cohort.
+*What are the most recurrent amino-acid changes across all impact tiers?*
+```{r prot-prev-unfilter-table}
+
+prot_unfiltered_cleaned <- protein_prevalence_unfiltered_all %>%
+  head(20)                             
+  
+knitr::kable(
+  prot_unfiltered_cleaned,
+  format = "latex",
+  escape = TRUE,
+  caption   = "Top 20 protein-altering variants by carrier frequency (all impacts).",
+  col.names = c("Gene", "HGVS.p", "Impact", "Patient Count", "Genomic Coordinates")
+)%>%
+ kable_styling(latex_options = c( "hold_position"), font_size = 6)%>%
+  # Column 5 is "Genomic Coordinates". Adjust the width (e.g., "5cm") as needed.
+  column_spec(5, width = "5cm")
+
+```
+
+## Protein-Altering Variant Prevalence
+Displays highly specific high/moderate impact, curated amino acid changes (HGVS.p) carrying confident clinical significance across the population.
+
+*What specific, high-confidence amino acid changes are altering protein function across the cohort?*
+```{r prot-prev-table, fig.show="hold", out.width="50%"}
+knitr::kable(
+  head(protein_prevalence_all, 20),
+  format = "latex",
+  caption   = "Top 20 protein-altering variants by carrier frequency.",
+  col.names = c("Gene", "HGVS.p", "Impact", "Patient Count",
+                "Genomic Coordinates")
+)%>%
+ kable_styling(latex_options = c("hold_position"), font_size = 6)%>%
+  # Column 5 is "Genomic Coordinates". Adjust the width (e.g., "5cm") as needed.
+  column_spec(5, width = "5cm")
+
+
+knitr::include_graphics(file.path(plots_dir, "13.1-top_protein_alterations_impact.png"))
+```
+
+
+## Reproducibility
+
+```{r repro}
+sessionInfo()
+```

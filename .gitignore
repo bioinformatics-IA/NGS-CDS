@@ -1,0 +1,61 @@
+# --- DEFAULT JAVA IGNORES ---
+*.class
+*.log
+*.ctxt
+.mtj.tmp/
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+hs_err_pid*
+replay_pid*
+
+# --- GRADLE & NETBEANS IGNORES ---
+.gradle/
+build/
+!bin/picard.jar
+!installNGS.jar
+!NGSSuite.jar
+# Keep all jars inside lib
+!lib/
+!lib/**
+!gradle/wrapper/gradle-wrapper.jar
+nbproject/private/
+nbbuild/
+dist/
+nbdist/
+.nb-gradle/
+
+# R history
+.Rhistory
+.RData
+.Ruserdata
+
+# Temporary files
+*.Rproj.user
+
+# --- LOCAL TOOL INSTALLATIONS (Exclude already installed folders) ---
+bin/subread-2.1.1-Linux-x86_64/
+bin/htslib-1.22/
+bin/samtools-1.22/
+bin/STAR_2.7.11b/
+bin/ensembl-vep-release-115/
+bin/IGV_Linux_2.19.4/
+bin/MultiQC-1.30/
+bin/Trimmomatic-0.39/
+bin/bwa-0.7.19/
+bin/FastQC/
+bin/gatk-4.6.2.0/
+bin/snpEff/
+bin/fastp-1.0.1/
+bin/bcftools-1.22/
+bin/ensembl-vep-release-114/
+R_Libraries/
+
+# --- EXCLUDE LARGE SIZE BINARY FOLDER 
+bin/R_Packages/
+zipbin/
+

@@ -1,0 +1,55 @@
+"!(ANN[*].EFFECT has 'intergenic_region') & !(ANN[*].EFFECT has 'intron_variant') & !(ANN[*].EFFECT has 'synonymous_variant') & (AF >= 0.01)"
+
+--------------------------------------
+java -Xmx8g -jar SnpSift.jar filter "(AF >= 0.01)" /media/dr/proteindynamics_data/Output_Dir/SRR8697626.annH.vcf | head
+##fileformat=VCFv4.2
+##ALT=<ID=NON_REF,Description="Represents any possible alternative allele not already represented at this location by REF and ALT">
+##FILTER=<ID=LowQual,Description="Low quality">
+##FILTER=<ID=WES_HardFilter,Description="QD < 2.0 || FS > 200.0 || MQ < 40.0">
+##FORMAT=<ID=AD,Number=R,Type=Integer,Description="Allelic depths for the ref and alt alleles in the order listed">
+##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Approximate read depth (reads with MQ=255 or with bad mates are filtered)">
+##FORMAT=<ID=GQ,Number=1,Type=Integer,Description="Genotype Quality">
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+##FORMAT=<ID=MIN_DP,Number=1,Type=Integer,Description="Minimum DP observed within the GVCF block">
+##FORMAT=<ID=PGT,Number=1,Type=String,Description="Physical phasing haplotype information, describing how the alternate alleles are phased in relation to one another; will always be heterozygous and is not intended to describe called alleles">
+-------------------------------------
+java -Xmx8g -jar SnpSift.jar filter "(ANN[*].EFFECT != 'intergenic_region')" /media/dr/proteindynamics_data/Output_Dir/SRR8697626.annH.vcf | head
+
+java -Xmx8g -jar SnpSift.jar filter "(ANN[*].EFFECT != 'intron_variant')" /media/dr/proteindynamics_data/Output_Dir/SRR8697626.annH.vcf | head
+##fileformat=VCFv4.2
+##ALT=<ID=NON_REF,Description="Represents any possible alternative allele not already represented at this location by REF and ALT">
+##FILTER=<ID=LowQual,Description="Low quality">
+##FILTER=<ID=WES_HardFilter,Description="QD < 2.0 || FS > 200.0 || MQ < 40.0">
+##FORMAT=<ID=AD,Number=R,Type=Integer,Description="Allelic depths for the ref and alt alleles in the order listed">
+##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Approximate read depth (reads with MQ=255 or with bad mates are filtered)">
+##FORMAT=<ID=GQ,Number=1,Type=Integer,Description="Genotype Quality">
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+##FORMAT=<ID=MIN_DP,Number=1,Type=Integer,Description="Minimum DP observed within the GVCF block">
+##FORMAT=<ID=PGT,Number=1,Type=String,Description="Physical phasing haplotype information, describing how the alternate alleles are phased in relation to one another; will always be heterozygous and is not intended to describe called alleles">
+
+
+
+
+
+
+
+grep -v '^#' /media/dr/proteindynamics_data/Output_Dir/SRR8697626.annH.vcf | head -5 | cut -f8
+===============================================
+
+23:49:20.221 INFO  SelectVariants - Shutting down engine
+
+[September 26, 2025, 11:49:20 PM PKT] org.broadinstitute.hellbender.tools.walkers.variantutils.SelectVariants done. Elapsed time: 0.86 minutes.
+
+Runtime.totalMemory()=4294967296
+
+htsjdk.tribble.TribbleException: Line 472557: there aren't enough columns for line -02;DP=31;ExcessHet=0.0000;FS=0.000;MLEAC=1;MLEAF=0.500;MQ=53.51;MQRankSum=-2.522e+00;QD=27.02;ReadPosRankSum=-1.590e-01;SOR=1.022	GT:AD:DP:GQ:PGT:PID:PL:PS	0|1:10,21:31:99:0|1:78652_G_A:845,0,315:78652 (we expected 9 tokens, and saw 3 ), for input source: /media/nigab/sdc1/Wajya/Iffat/Output_WESsNew/SRR20972532_HVFB.vcf
+
+	at htsjdk.variant.vcf.AbstractVCFCodec.decodeLine(AbstractVCFCodec.java:381
+
+
+
+
+
+
+
+
