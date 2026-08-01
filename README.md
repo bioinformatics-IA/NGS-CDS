@@ -61,9 +61,12 @@ The following components are not included in this GitHub repository because they
 | `bin/R_Packages/` | Offline R and Bioconductor package repository required for offline installation   |
 | `zipbin/`      | Archived third-party bioinformatics software packages used during installation       |
 
-These files can be downloaded from:
+These files can be downloaded from Google Drive:
 
-**Coming soon — download link will be provided upon publication.**
+- **bin/R_Packages/** [Download `R_Packages`](https://drive.google.com/drive/folders/1kgZMNtEn8zR5TPataWeCktIJYuqXgnQ7?usp=drive_link)
+- **zipbin/** [Download `zipbin`](https://drive.google.com/drive/folders/1g9_PUkYgnpcdconrORYLkKlVsqSS6_0q?usp=sharing)
+
+**Note:** Download both folders and place them in the appropriate project directories before running the offline installer. Please refer to the installation instructions for the required folder structure.
 
 ## Installation
 
@@ -143,11 +146,11 @@ NGS-CDS/
 │   ├── *.R                        # R analysis scripts
 │   ├── picard.jar
 │   ├── Tool directories
-│   └── R_Packages/                # Offline CRAN/Bioconductor packages — Not included in this repository; download separately.
+│   └── R_Packages/                # Offline CRAN/Bioconductor packages — Download separately from the Google Drive link provided above.
 │
 ├── images/                        # Application icons and graphical resources
 ├── logs/                          # Execution and analysis logs
-├── zipbin/                        # Archived offline software packages — Not included in this repository; download separately.
+├── zipbin/                        # Archived offline software packages — Download separately from the Google Drive link provided above.
 ├── NGSSuite.jar                   # Main application
 ├── installNGS.jar                 # Run-once installer
 ├── User_Manual.pdf                # Complete software documentation
