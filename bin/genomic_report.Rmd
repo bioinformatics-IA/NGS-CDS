@@ -58,6 +58,42 @@ The cohort comprises **`r total_patients`** unique baseline samples, with
 genes. This report consolidates downstream somatic variant data into three operational tiers: 
 *Sample-level burden*, *Gene-level driver penetrance*, and *Variant-level hotspot resolutions*.
 
+## Cohort Variant Filtration & Quality Overview
+**Biological & Pipeline Context**: Tracks raw annotated variant yield against SnpSift quality thresholds. Summarizes sample-level attrition and cumulative variant retention across the cohort.
+
+```{r filtration-summary-table, results='asis', echo=FALSE}
+if (exists("filter_data_current") && !is.null(filter_data_current) && nrow(filter_data_current) > 0) {  # Read filtration CSV generated from bash
+ 
+  
+  # Separate sample records from the TOTAL summary row
+  sample_rows <- filter_data_current %>% filter(!grepl("^TOTAL", Sample))
+  total_row   <- filter_data_current %>% filter(grepl("^TOTAL", Sample))
+  
+  # Top 10 samples + Sub-Total row
+  display_df <- bind_rows(
+    head(sample_rows, 10),
+    total_row
+  )
+  
+  # Determine title string based on active stage
+  raw_stage <- ifelse(exists("active_stage"), active_stage, "Pipeline")
+  stage_title <- gsub("_", " ", raw_stage)
+  
+  knitr::kable(
+    display_df,
+    format    = "latex",
+    booktabs  = TRUE,
+    caption   = paste("Variant Attrition Summary (", stage_title, " - Top 10 Samples + Total)", sep=""),
+    col.names = c("Sample / Metric", "Pipeline Stage", "Raw Variants", "Filtered Variants", "Removed Variants", "Retention %")
+  ) %>%
+    kable_styling(latex_options = c("scale_down", "hold_position")) %>%
+    row_spec(nrow(display_df), bold = TRUE, background = "#F2F2F2") # Highlight TOTAL row
+
+} else {
+ cat("*Notice: Pre-merged filtration log (`filtration_counts.csv`) was not detected for this stage.*\n\n")
+}
+```
+
 ## Mutation Burden per Sample
 **Biological Context**: Identifies total tumor mutational burden (TMB) per patient using the global variant landscape. This allows rapid screening for hypermutated baseline samples or samples featuring mismatch repair deficiencies.
 *What is the Tumor Mutational Burden (TMB) across the cohort, and which patients are hypermutated?*

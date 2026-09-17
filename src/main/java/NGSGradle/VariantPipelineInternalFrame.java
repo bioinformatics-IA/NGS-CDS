@@ -57,6 +57,7 @@ import javax.swing.DefaultComboBoxModel;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
 import javax.swing.table.TableCellRenderer;
+import java.util.stream.Stream;
 
 /**
  *
@@ -70,6 +71,7 @@ public class VariantPipelineInternalFrame extends javax.swing.JInternalFrame {
     private DefaultListModel<String> listModelreadSingle, listModelreadPair1, listModelreadPair2;
     private Map<String, List<String>> singlePathMap;
     private Map<String, Map<String, List<String>>> pairPathMap;
+
     public String selectedKey;
     public InputPathDialog inputDialog;
     public int fastCounter;
@@ -91,7 +93,7 @@ public class VariantPipelineInternalFrame extends javax.swing.JInternalFrame {
     //Components for addReplaceRGPanel
     private ArrayList<JLabel> labels;
     private ArrayList<JTextField> textFields;
-
+    public static String pipelineStage = "germline_snpeff";
     private String germSomaticOP = "";
     private String somaticOP = "";
     boolean pipelineError = false;//No error
@@ -123,6 +125,57 @@ public class VariantPipelineInternalFrame extends javax.swing.JInternalFrame {
         "DP > 10"
 
     };
+
+    private String[] snpSiftFiltersVEP = {
+        // Consequence (VEP equivalent of EFFECT)
+        "CSQ[*].Consequence has 'missense_variant'",
+        "CSQ[*].Consequence has 'frameshift_variant'",
+        "CSQ[*].Consequence has 'stop_gained'",
+        "CSQ[*].Consequence has 'stop_lost'",
+        "CSQ[*].Consequence has 'start_lost'",
+        "CSQ[*].Consequence has 'splice_acceptor_variant'",
+        "CSQ[*].Consequence has 'splice_donor_variant'",
+        "CSQ[*].Consequence has 'synonymous_variant'",
+        "CSQ[*].Consequence has 'intron_variant'",
+        "CSQ[*].Consequence has '5_prime_UTR_variant'",
+        "CSQ[*].Consequence has '3_prime_UTR_variant'",
+        "CSQ[*].Consequence has 'start_retained_variant'",
+        "CSQ[*].Consequence has 'stop_retained_variant'",
+        "CSQ[*].Consequence has 'protein_altering_variant'",
+        "CSQ[*].Consequence has 'non_coding_transcript_exon_variant'",
+        // IMPACT filters (VEP CSQ field)
+        "CSQ[*].IMPACT = 'HIGH'",
+        "CSQ[*].IMPACT = 'MODERATE'",
+        "CSQ[*].IMPACT = 'LOW'",
+        "CSQ[*].IMPACT = 'MODIFIER'",
+        "((CSQ[*].IMPACT = 'HIGH') | (CSQ[*].IMPACT = 'MODERATE'))",
+        // Gene (SYMBOL in VEP) and Biotype filters
+        "CSQ[*].SYMBOL = 'TP53'",
+        "CSQ[*].SYMBOL = 'BRCA1'",
+        "CSQ[*].BIOTYPE = 'protein_coding'",
+        "CSQ[*].BIOTYPE = 'lncRNA'",
+        // Combined logic filters
+        "((CSQ[*].Consequence has 'missense_variant') | (CSQ[*].Consequence has 'stop_gained'))",
+        "((CSQ[*].IMPACT = 'HIGH') & (CSQ[*].BIOTYPE = 'protein_coding'))",
+        "((CSQ[*].Consequence has 'frameshift_variant') & (CSQ[*].SYMBOL = 'BRCA2'))",
+        "((CSQ[*].IMPACT = 'MODERATE') & (CSQ[*].BIOTYPE = 'protein_coding') & (CSQ[*].Consequence has 'missense_variant'))",
+        // Population frequency (gnomAD in VEP)
+        "(CSQ[*].gnomAD_AF < 0.001 | !(exists CSQ[*].gnomAD_AF))",
+        // General VCF quality filters
+        "isVariant", "isVariant & (VT = 'SNP')", "isVariant & (VT = 'INDEL')",
+        "FILTER = 'PASS'", "QUAL > 30", "DP > 10"
+    };
+
+    String[] combinedFilters = Stream.concat(
+            Stream.of("--- SnpEff Filters ---"),
+            Stream.concat(
+                    Stream.of(snpSiftFilters),
+                    Stream.concat(
+                            Stream.of("--- VEP Filters ---"),
+                            Stream.of(snpSiftFiltersVEP)
+                    )
+            )
+    ).toArray(String[]::new);
 
     /**
      * Creates new form RNASeqAnalysisInternalFrame
@@ -692,12 +745,11 @@ public class VariantPipelineInternalFrame extends javax.swing.JInternalFrame {
                     cmdList.add(App.GATK_PATH);//3
                     cmdList.add(App.SNPEFF_PATH);//4
                     cmdList.add(App.VEP_PATH);//5
-                    
+
                     cmdList.add(System.getProperty("user.dir").concat("/R_Libraries")); //6
 
-
                     //BAM FILES
-                     String bamfiles = "";
+                    String bamfiles = "";
                     for (int i = 0; i < inputBamTxt.getModel().getSize(); i++) {
 
                         bamfiles += (inputBamTxt.getModel().getElementAt(i) + ",").trim();
@@ -722,8 +774,7 @@ public class VariantPipelineInternalFrame extends javax.swing.JInternalFrame {
 
                     if (splitNcigar.isSelected()) {
                         cmdList.add("YES");//12 
-                    } 
-                    else {
+                    } else {
                         cmdList.add("NO");//12 
                     }
 
@@ -732,19 +783,17 @@ public class VariantPipelineInternalFrame extends javax.swing.JInternalFrame {
                         cmdList.add(""); //14
                     } else if (jointModeH.isSelected()) {
                         cmdList.add("JOINTMODE");//13 
-                        if(uploadIntervalfileR.isSelected()){
-                            cmdList.add(" -L "+intervalT1.getText());//14
-                        }
-                        else{
+                        if (uploadIntervalfileR.isSelected()) {
+                            cmdList.add(" -L " + intervalT1.getText());//14
+                        } else {
                             cmdList.add(intervalText1.getText());//14
                         }
-                        
+
                     }
 
-                     cmdList.add(thread.getText());  //15
+                    cmdList.add(thread.getText());  //15
 
-                     
-                     //if snpEff, VEP, BOTH   16-19
+                    //if snpEff, VEP, BOTH   16-19
                     if (snpEffRadio.isSelected()) {
                         cmdList.add("snpeff");//16
                         cmdList.add(snpEff_DB.getText());//17  
@@ -762,8 +811,8 @@ public class VariantPipelineInternalFrame extends javax.swing.JInternalFrame {
                         cmdList.add(vepAssembly.getText());//18
                         cmdList.add(vepSpecies.getText());//19
                     }
-                        //20-23
-                    if (selectVariantsOp.isSelected()  && variantFilterA.isSelected()) {
+                    //20-23
+                    if (selectVariantsOp.isSelected() && variantFilterA.isSelected()) {
                         cmdList.add("ALL");//20
                         cmdList.add(selectVariantTxt.getText().trim());//21
                         cmdList.add(variantFilterTxtB.getText().trim()); //22
@@ -773,10 +822,10 @@ public class VariantPipelineInternalFrame extends javax.swing.JInternalFrame {
                         cmdList.add("");//21
                         cmdList.add(variantFilterTxtB.getText().trim()); //22
                         cmdList.add(variantFilterTxtA.getText().trim()); //23
-                    } 
+                    }
 
                     //Checking germ or somatic selected  24
-                    if ((germline.isSelected()) && (somatic.isSelected())) { 
+                    if ((germline.isSelected()) && (somatic.isSelected())) {
                         germSomaticOP = "BOTH";
                     } else if (germline.isSelected()) {
                         germSomaticOP = "GERMLINE";
@@ -805,7 +854,7 @@ public class VariantPipelineInternalFrame extends javax.swing.JInternalFrame {
                             cmdList.add("");//28
                         }
                         //Somatic setting  
-                        
+
                         if (mutectCombo.getSelectedIndex() == 1 || mutectCombo.getSelectedIndex() == 2) //Tumor with matched normal (single)
                         {
 
@@ -819,57 +868,53 @@ public class VariantPipelineInternalFrame extends javax.swing.JInternalFrame {
                             nbamfiles = StringUtils.chop(nbamfiles);
                             cmdList.add(nbamfiles);//27 Tumor-Normal Bam file name  
 
-                        } else if (mutectCombo.getSelectedIndex() == 3 ){
-                        
+                        } else if (mutectCombo.getSelectedIndex() == 3) {
+
                             //Tumor only mode
-                            if(jListNormal.getModel().getSize()==0)
-                            {
-                            
-                            //Tumor BAM FILES
-                            String nbamfiles = "";
-                            for (int i = 0; i < jListTumor.getModel().getSize(); i++) {
+                            if (jListNormal.getModel().getSize() == 0) {
 
-                                nbamfiles += (jListTumor.getModel().getElementAt(i) + ",").trim();
+                                //Tumor BAM FILES
+                                String nbamfiles = "";
+                                for (int i = 0; i < jListTumor.getModel().getSize(); i++) {
 
-                            }
-                            nbamfiles = StringUtils.chop(nbamfiles);
-                            cmdList.add(nbamfiles);//27 Tumor Bam file name  
-                            
-                            }//tumorOnly
-                            //Pon creation mode (normals only)
-                            else if (jListNormal.getModel().getSize()==0){
-                            //Tumor BAM FILES
-                            String nbamfiles = "";
-                            for (int i = 0; i < jListNormal.getModel().getSize(); i++) {
-
-                                nbamfiles += (jListNormal.getModel().getElementAt(i) + ",").trim();
-
-                            }
-                            nbamfiles = StringUtils.chop(nbamfiles);
-                            cmdList.add(nbamfiles);//27 Tumor Bam file name 
-                            }//normal only mode
-                            
-                            
-                            //tumor with PON mode
-                            else{
-                              
-                                if (generatePON.isSelected()){
-                                //Tumor-NORMAL BAM FILES
-                            String nbamfiles = "";
-                            for (int i = 0; i < jListNormal.getModel().getSize(); i++) {
-
-                                nbamfiles += (jListTumor.getModel().getElementAt(i) + "#" + jListNormal.getModel().getElementAt(i) + ",").trim();
-
-                            }
-                            nbamfiles = StringUtils.chop(nbamfiles);
-                            cmdList.add(nbamfiles);//27 Tumor-Normal Bam file name  
+                                    nbamfiles += (jListTumor.getModel().getElementAt(i) + ",").trim();
 
                                 }
-                            
+                                nbamfiles = StringUtils.chop(nbamfiles);
+                                cmdList.add(nbamfiles);//27 Tumor Bam file name  
+
+                            }//tumorOnly
+                            //Pon creation mode (normals only)
+                            else if (jListNormal.getModel().getSize() == 0) {
+                                //Tumor BAM FILES
+                                String nbamfiles = "";
+                                for (int i = 0; i < jListNormal.getModel().getSize(); i++) {
+
+                                    nbamfiles += (jListNormal.getModel().getElementAt(i) + ",").trim();
+
+                                }
+                                nbamfiles = StringUtils.chop(nbamfiles);
+                                cmdList.add(nbamfiles);//27 Tumor Bam file name 
+                            }//normal only mode
+                            //tumor with PON mode
+                            else {
+
+                                if (generatePON.isSelected()) {
+                                    //Tumor-NORMAL BAM FILES
+                                    String nbamfiles = "";
+                                    for (int i = 0; i < jListNormal.getModel().getSize(); i++) {
+
+                                        nbamfiles += (jListTumor.getModel().getElementAt(i) + "#" + jListNormal.getModel().getElementAt(i) + ",").trim();
+
+                                    }
+                                    nbamfiles = StringUtils.chop(nbamfiles);
+                                    cmdList.add(nbamfiles);//27 Tumor-Normal Bam file name  
+
+                                }
+
                             }//tumor with PON mode
-                            
-                        }
-                         else if    ( mutectCombo.getSelectedIndex() == 4 || mutectCombo.getSelectedIndex() == 5) //Tumor Only mode
+
+                        } else if (mutectCombo.getSelectedIndex() == 4 || mutectCombo.getSelectedIndex() == 5) //Tumor Only mode
                         {
 
                             //Tumor BAM FILES
@@ -895,14 +940,13 @@ public class VariantPipelineInternalFrame extends javax.swing.JInternalFrame {
 
                         if (g1Check.isSelected()) {
                             cmdList.add(annotationGroupTxt.getText()); //25 -G
-                        }else{ 
+                        } else {
                             cmdList.add("");//25
                         }
-                        
-                        
+
                         if (bamoutCheck.isSelected()) {
                             cmdList.add(bamoutTxt.getText()); //26 -bamout
-                        }else{ 
+                        } else {
                             cmdList.add("");//26
                         }
 
@@ -921,57 +965,53 @@ public class VariantPipelineInternalFrame extends javax.swing.JInternalFrame {
                             nbamfiles = StringUtils.chop(nbamfiles);
                             cmdList.add(nbamfiles);//24 Tumor-Normal Bam file name  
 
-                        } else if (mutectCombo.getSelectedIndex() == 3 ){
-                        
+                        } else if (mutectCombo.getSelectedIndex() == 3) {
+
                             //Tumor only mode
-                            if(jListNormal.getModel().getSize()==0)
-                            {
-                            
-                            //Tumor BAM FILES
-                            String nbamfiles = "";
-                            for (int i = 0; i < jListTumor.getModel().getSize(); i++) {
+                            if (jListNormal.getModel().getSize() == 0) {
 
-                                nbamfiles += (jListTumor.getModel().getElementAt(i) + ",").trim();
+                                //Tumor BAM FILES
+                                String nbamfiles = "";
+                                for (int i = 0; i < jListTumor.getModel().getSize(); i++) {
 
-                            }
-                            nbamfiles = StringUtils.chop(nbamfiles);
-                            cmdList.add(nbamfiles);//24 Tumor Bam file name  
-                            
-                            }//tumorOnly
-                            //Pon creation mode (normals only)
-                            else if (jListNormal.getModel().getSize()==0){
-                            //Tumor BAM FILES
-                            String nbamfiles = "";
-                            for (int i = 0; i < jListNormal.getModel().getSize(); i++) {
-
-                                nbamfiles += (jListNormal.getModel().getElementAt(i) + ",").trim();
-
-                            }
-                            nbamfiles = StringUtils.chop(nbamfiles);
-                            cmdList.add(nbamfiles);//24 Tumor Bam file name 
-                            }//normal only mode
-                            
-                            
-                            //tumor with PON mode
-                            else{
-                              
-                                if (generatePON.isSelected()){
-                                //Tumor-NORMAL BAM FILES
-                            String nbamfiles = "";
-                            for (int i = 0; i < jListNormal.getModel().getSize(); i++) {
-
-                                nbamfiles += (jListTumor.getModel().getElementAt(i) + "#" + jListNormal.getModel().getElementAt(i) + ",").trim();
-
-                            }
-                            nbamfiles = StringUtils.chop(nbamfiles);
-                            cmdList.add(nbamfiles);//24 Tumor-Normal Bam file name  
+                                    nbamfiles += (jListTumor.getModel().getElementAt(i) + ",").trim();
 
                                 }
-                            
+                                nbamfiles = StringUtils.chop(nbamfiles);
+                                cmdList.add(nbamfiles);//24 Tumor Bam file name  
+
+                            }//tumorOnly
+                            //Pon creation mode (normals only)
+                            else if (jListNormal.getModel().getSize() == 0) {
+                                //Tumor BAM FILES
+                                String nbamfiles = "";
+                                for (int i = 0; i < jListNormal.getModel().getSize(); i++) {
+
+                                    nbamfiles += (jListNormal.getModel().getElementAt(i) + ",").trim();
+
+                                }
+                                nbamfiles = StringUtils.chop(nbamfiles);
+                                cmdList.add(nbamfiles);//24 Tumor Bam file name 
+                            }//normal only mode
+                            //tumor with PON mode
+                            else {
+
+                                if (generatePON.isSelected()) {
+                                    //Tumor-NORMAL BAM FILES
+                                    String nbamfiles = "";
+                                    for (int i = 0; i < jListNormal.getModel().getSize(); i++) {
+
+                                        nbamfiles += (jListTumor.getModel().getElementAt(i) + "#" + jListNormal.getModel().getElementAt(i) + ",").trim();
+
+                                    }
+                                    nbamfiles = StringUtils.chop(nbamfiles);
+                                    cmdList.add(nbamfiles);//24 Tumor-Normal Bam file name  
+
+                                }
+
                             }//tumor with PON mode
-                            
-                        }
-                         else if    ( mutectCombo.getSelectedIndex() == 4 || mutectCombo.getSelectedIndex() == 5) //Tumor Only mode
+
+                        } else if (mutectCombo.getSelectedIndex() == 4 || mutectCombo.getSelectedIndex() == 5) //Tumor Only mode
                         {
 
                             //Tumor BAM FILES
@@ -1010,11 +1050,8 @@ public class VariantPipelineInternalFrame extends javax.swing.JInternalFrame {
                                 || line.toLowerCase().contains("killed")
                                 || line.toLowerCase().contains("aborted")
                                 || line.toLowerCase().contains("no such file or directory"))) {
-                          //  line = reader.readLine();
-                          //  publish("\r\n" + line);
 
                             pipelineError = true;
-                          //  break;
                         }
 
                     }
@@ -1045,19 +1082,41 @@ public class VariantPipelineInternalFrame extends javax.swing.JInternalFrame {
             @Override
             protected void done() {
                 App.sP.setBorder(javax.swing.BorderFactory.createTitledBorder(null, "", javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION, javax.swing.border.TitledBorder.DEFAULT_POSITION, new java.awt.Font("Liberation Sans", 1, 15), new java.awt.Color(255, 255, 255)));
-
                 App.bar.setIndeterminate(false);
-                if (!pipelineError) {
-
-                    //*.annH.sift.vcf,*_vep_annH.sift.vcf
-                    if (snpEffRadio.isSelected() && vepRadio.isSelected()) {
-                        VCFHandler(System.getProperty("user.dir").concat("/bin/extract_all_vcfs.sh"), output_Dir.getText(), "*.annH.sift.vcf");
-                        VCFHandler(System.getProperty("user.dir").concat("/bin/extract_all_vcfs.sh"), output_Dir.getText(), "*_vep_annH.sift.vcf");
-
+                 if (!pipelineError) {
+                       //*.annH.sift.vcf,*_vep_annH.sift.vcf
+                    if (snpEffvepRadio.isSelected()) {
+                        
+                        if(germline.isSelected()){
+                            pipelineStage="germline_snpeff";
+                       
+                            VCFHandler(System.getProperty("user.dir").concat("/bin/extract_all_vcfs.sh"), output_Dir.getText(), "*.annH.sift.vcf");
+                        
+                     
+                        
+                        }
+//                        if (somatic.isSelected()){
+//                        VCFHandler(System.getProperty("user.dir").concat("/bin/extract_all_vcfs.sh"), output_Dir.getText(), "*.annM.sift.vcf");
+//                        VCFHandler(System.getProperty("user.dir").concat("/bin/extract_all_vcfs.sh"), output_Dir.getText(), "*_vep_annM.sift.vcf");
+//                            
+//                        }
+                        
+                        
+                        
                     } else if (snpEffRadio.isSelected()) {
-                        VCFHandler(System.getProperty("user.dir").concat("/bin/extract_all_vcfs.sh"), output_Dir.getText(), "*.annH.sift.vcf");
+                        if(germline.isSelected())
+                            VCFHandler(System.getProperty("user.dir").concat("/bin/extract_all_vcfs.sh"), output_Dir.getText(), "*.annH.sift.vcf");
+                 
+                        if(somatic.isSelected())
+                            VCFHandler(System.getProperty("user.dir").concat("/bin/extract_all_vcfs.sh"), output_Dir.getText(), "*.annM.sift.vcf");
+                 
+                    
                     } else {
-                        VCFHandler(System.getProperty("user.dir").concat("/bin/extract_all_vcfs.sh"), output_Dir.getText(), "*_vep_annH.sift.vcf");
+                        if (germline.isSelected())
+                            VCFHandler(System.getProperty("user.dir").concat("/bin/extract_all_vcfs.sh"), output_Dir.getText(), "*_vep_annH.sift.vcf");
+
+                        if (somatic.isSelected())
+                            VCFHandler(System.getProperty("user.dir").concat("/bin/extract_all_vcfs.sh"), output_Dir.getText(), "*_vep_annM.sift.vcf");
 
                     }
 
@@ -1074,7 +1133,15 @@ public class VariantPipelineInternalFrame extends javax.swing.JInternalFrame {
 //                    //((DefaultTreeModel) jTree1.getModel()).reload();
 //
 //                    visualPanel.setVisible(true);
+                }//if
+                else{
+                            publish("\r\n" + "ERROR: Pipeline failed in previous step. The following processes were NOT completed:\n"
+                       + " - TSV Extraction from annotated VCF files\n"
+                       + " - Combined Wide/Long TSV matrix generation\n\n"
+                       + "Please resolve the errors above and re-run.");
+
                 }
+                
             }//done
 
         };
@@ -1142,22 +1209,49 @@ public class VariantPipelineInternalFrame extends javax.swing.JInternalFrame {
 
                 App.bar.setIndeterminate(false);
                 if (!pipelineError) {
+    
+                    if (snpEffvepRadio.isSelected()) {
 
-                    if (snpEffRadio.isSelected() && vepRadio.isSelected()) {
-                     VCF_PivotFiles(System.getProperty("user.dir").concat("/bin/VCF_PivotFiles.R"), output_Dir.getText(),System.getProperty("user.dir").concat("/R_Libraries"), output_Dir.getText().concat("/mergedLong_annH_sift_all.tsv"));
-                 VCF_PivotFiles(System.getProperty("user.dir").concat("/bin/VCF_PivotFiles.R"), output_Dir.getText(),System.getProperty("user.dir").concat("/R_Libraries"), output_Dir.getText().concat("/mergedLong_vep_sift_all.tsv"));
+                        if(germline.isSelected()){
+                      
+                        if(pipelineStage=="germline_snpeff") {
+                            VCF_PivotFiles(System.getProperty("user.dir").concat("/bin/VCF_PivotFiles.R"), output_Dir.getText(), System.getProperty("user.dir").concat("/R_Libraries"), output_Dir.getText().concat("/mergedLong_annH_sift_all.tsv"),System.getProperty("user.dir").concat("/bin/genomic_report.Rmd"));
+                        }
+                        else if(pipelineStage=="germline_vep") {
+                           // pipelineStage="germline_snpeff";
+                             VCF_PivotFiles(System.getProperty("user.dir").concat("/bin/VCF_PivotFiles.R"), output_Dir.getText(), System.getProperty("user.dir").concat("/R_Libraries"), output_Dir.getText().concat("/mergedLong_vep_annH_sift_all.tsv"),System.getProperty("user.dir").concat("/bin/genomic_report.Rmd"));   
+                            
+                        }
+                                                
+                        }
+                        
+                        if(somatic.isSelected()){
+                        if(pipelineStage=="somatic_snpeff") {
+                        
+                            VCF_PivotFiles(System.getProperty("user.dir").concat("/bin/VCF_PivotFiles.R"), output_Dir.getText(), System.getProperty("user.dir").concat("/R_Libraries"), output_Dir.getText().concat("/mergedLong_annM_sift_all.tsv"),System.getProperty("user.dir").concat("/bin/genomic_report.Rmd"));
+                        }
+                        else if(pipelineStage=="somatic_vep") {
+                        
+                            VCF_PivotFiles(System.getProperty("user.dir").concat("/bin/VCF_PivotFiles.R"), output_Dir.getText(), System.getProperty("user.dir").concat("/R_Libraries"), output_Dir.getText().concat("/mergedLong_vep_annM_sift_all.tsv"),System.getProperty("user.dir").concat("/bin/genomic_report.Rmd"));    
+                        }
+                        
+                        }
 
                     } else if (snpEffRadio.isSelected()) {
-
-                 VCF_PivotFiles(System.getProperty("user.dir").concat("/bin/VCF_PivotFiles.R"), output_Dir.getText(),System.getProperty("user.dir").concat("/R_Libraries"), output_Dir.getText().concat("/mergedLong_annH_sift_all.tsv"));
+                      if(germline.isSelected())      
+                        VCF_PivotFiles(System.getProperty("user.dir").concat("/bin/VCF_PivotFiles.R"), output_Dir.getText(), System.getProperty("user.dir").concat("/R_Libraries"), output_Dir.getText().concat("/mergedLong_annH_sift_all.tsv"),System.getProperty("user.dir").concat("/bin/genomic_report.Rmd"));
+                       if(somatic.isSelected())      
+                        VCF_PivotFiles(System.getProperty("user.dir").concat("/bin/VCF_PivotFiles.R"), output_Dir.getText(), System.getProperty("user.dir").concat("/R_Libraries"), output_Dir.getText().concat("/mergedLong_annM_sift_all.tsv"),System.getProperty("user.dir").concat("/bin/genomic_report.Rmd"));
                     } else {
-                 VCF_PivotFiles(System.getProperty("user.dir").concat("/bin/VCF_PivotFiles.R"), output_Dir.getText(),System.getProperty("user.dir").concat("/R_Libraries"), output_Dir.getText().concat("/mergedLong_vep_sift_all.tsv"));
-
+                        if(germline.isSelected()){
+                        VCF_PivotFiles(System.getProperty("user.dir").concat("/bin/VCF_PivotFiles.R"), output_Dir.getText(), System.getProperty("user.dir").concat("/R_Libraries"), output_Dir.getText().concat("/mergedLong_vep_annH_sift_all.tsv"),System.getProperty("user.dir").concat("/bin/genomic_report.Rmd"));
+    
+                        }
+                        if(somatic.isSelected()){
+                        VCF_PivotFiles(System.getProperty("user.dir").concat("/bin/VCF_PivotFiles.R"), output_Dir.getText(), System.getProperty("user.dir").concat("/R_Libraries"), output_Dir.getText().concat("/mergedLong_vep_annM_sift_all.tsv"),System.getProperty("user.dir").concat("/bin/genomic_report.Rmd"));
+    
+                        }
                     }
-                    
-
-
-
 
                 }//endif
             }//done
@@ -1167,7 +1261,8 @@ public class VariantPipelineInternalFrame extends javax.swing.JInternalFrame {
         worker.execute();
 
     }
-public void VCF_PivotFiles(String scriptPath, String directoryPath, String rLib, String filePath) {
+
+    public void VCF_PivotFiles(String scriptPath, String directoryPath, String rLib, String filePath,String markDownFile) {
 
         warningLabel.setText(null);
         pipelineError = false;
@@ -1183,11 +1278,11 @@ public void VCF_PivotFiles(String scriptPath, String directoryPath, String rLib,
                 try {
 
                     // Build the process
-                    ProcessBuilder processBuilder = new ProcessBuilder("Rscript", 
-                            scriptPath, 
+                    ProcessBuilder processBuilder = new ProcessBuilder("Rscript",
+                            scriptPath,
                             directoryPath,
-                            rLib, 
-                            filePath);
+                            rLib,
+                            filePath,markDownFile);
                     processBuilder.redirectErrorStream(true);
                     // Start the process
                     process = processBuilder.start();
@@ -1229,7 +1324,30 @@ public void VCF_PivotFiles(String scriptPath, String directoryPath, String rLib,
 
                 App.bar.setIndeterminate(false);
                 if (!pipelineError) {
+                
+                if (snpEffvepRadio.isSelected()) {
+                       
+                        if(germline.isSelected()){
+                        if(pipelineStage=="germline_snpeff"){
+                            pipelineStage="germline_vep";
+                            VCFHandler(System.getProperty("user.dir").concat("/bin/extract_all_vcfs.sh"), output_Dir.getText(), "*_vep_annH.sift.vcf");
+                          
+                        }
+                             
+                        }
+                       
+                        if(somatic.isSelected()){
+                        VCF_PivotFiles(System.getProperty("user.dir").concat("/bin/VCF_PivotFiles.R"), output_Dir.getText(), System.getProperty("user.dir").concat("/R_Libraries"), output_Dir.getText().concat("/mergedLong_annM_sift_all.tsv"),System.getProperty("user.dir").concat("/bin/genomic_report.Rmd"));
+                        VCF_PivotFiles(System.getProperty("user.dir").concat("/bin/VCF_PivotFiles.R"), output_Dir.getText(), System.getProperty("user.dir").concat("/R_Libraries"), output_Dir.getText().concat("/mergedLong_vep_annM_sift_all.tsv"),System.getProperty("user.dir").concat("/bin/genomic_report.Rmd"));    
+                            
+                        }
 
+                    }
+                
+                
+                
+                
+                    
                 }//endif
             }//done
 
@@ -1238,7 +1356,7 @@ public void VCF_PivotFiles(String scriptPath, String directoryPath, String rLib,
         worker.execute();
 
     }
-    
+
     public void inputFilesDataS(Map<String, List<String>> fileMap, String key) {
 
 //RESETING ALL ARRAYS
@@ -1728,10 +1846,10 @@ public void VCF_PivotFiles(String scriptPath, String directoryPath, String rLib,
                         App.LOGGER.info(line + "\r\n");
                         publish(line);
                         if (line.contains("ERROR: igzip: unexpected eof") || line.contains("Fastp failed")
-                                || line.contains("MultiQC failed!") ) {
+                                || line.contains("MultiQC failed!")) {
                             pipelineError = true;
                             App.LOGGER.error("Pipeline error detected: " + line);
-                            break; 
+                            break;
                         }
                     }//endWhile
 
@@ -2697,7 +2815,7 @@ public void VCF_PivotFiles(String scriptPath, String directoryPath, String rLib,
         warningLabel.setForeground(new java.awt.Color(255, 0, 51));
 
         nextBtn.setFont(new java.awt.Font("Liberation Sans", 1, 12)); // NOI18N
-        nextBtn.setIcon(new javax.swing.ImageIcon(System.getProperty("user.dir").concat("/images/next1.png"))); // NOI18N
+        nextBtn.setIcon(new javax.swing.ImageIcon("/home/iffy/NetBeansProjects/NGSGradle/app/images/next1.png")); // NOI18N
         nextBtn.setText("Proceed to Run Pipeline");
         nextBtn.setBorderPainted(false);
         nextBtn.setHorizontalTextPosition(javax.swing.SwingConstants.LEFT);
@@ -3499,7 +3617,7 @@ public void VCF_PivotFiles(String scriptPath, String directoryPath, String rLib,
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(fastpResultCombo, javax.swing.GroupLayout.PREFERRED_SIZE, 312, javax.swing.GroupLayout.PREFERRED_SIZE))
                     .addComponent(jLabel78, javax.swing.GroupLayout.PREFERRED_SIZE, 446, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addContainerGap(567, Short.MAX_VALUE))
+                .addContainerGap(256, Short.MAX_VALUE))
             .addGroup(fastpPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                 .addGroup(fastpPanelLayout.createSequentialGroup()
                     .addContainerGap()
@@ -3810,7 +3928,7 @@ public void VCF_PivotFiles(String scriptPath, String directoryPath, String rLib,
         intervalT.setEditable(false);
 
         add6.setFont(new java.awt.Font("Liberation Sans", 1, 18)); // NOI18N
-        add6.setIcon(new javax.swing.ImageIcon(System.getProperty("user.dir").concat("/images/plusSs.png"))); // NOI18N
+        add6.setIcon(new javax.swing.ImageIcon("/home/iffy/NetBeansProjects/NGSGradle/app/images/plusSs.png")); // NOI18N
         add6.setEnabled(false);
         add6.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -3819,7 +3937,7 @@ public void VCF_PivotFiles(String scriptPath, String directoryPath, String rLib,
         });
 
         del6.setFont(new java.awt.Font("Liberation Sans", 1, 18)); // NOI18N
-        del6.setIcon(new javax.swing.ImageIcon(System.getProperty("user.dir").concat("/images/removeSs.png"))); // NOI18N
+        del6.setIcon(new javax.swing.ImageIcon("/home/iffy/NetBeansProjects/NGSGradle/app/images/removeSs.png")); // NOI18N
         del6.setEnabled(false);
         del6.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -4137,7 +4255,7 @@ public void VCF_PivotFiles(String scriptPath, String directoryPath, String rLib,
         jScrollPane11.setViewportView(annotationGroupTxt);
 
         add7.setFont(new java.awt.Font("Liberation Sans", 1, 18)); // NOI18N
-        add7.setIcon(new javax.swing.ImageIcon(System.getProperty("user.dir").concat("/images/plusSs.png"))); // NOI18N
+        add7.setIcon(new javax.swing.ImageIcon("/home/iffy/NetBeansProjects/NGSGradle/app/images/plusSs.png")); // NOI18N
         add7.setEnabled(false);
         add7.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -4146,7 +4264,7 @@ public void VCF_PivotFiles(String scriptPath, String directoryPath, String rLib,
         });
 
         del7.setFont(new java.awt.Font("Liberation Sans", 1, 18)); // NOI18N
-        del7.setIcon(new javax.swing.ImageIcon(System.getProperty("user.dir").concat("/images/removeSs.png"))); // NOI18N
+        del7.setIcon(new javax.swing.ImageIcon("/home/iffy/NetBeansProjects/NGSGradle/app/images/removeSs.png")); // NOI18N
         del7.setEnabled(false);
         del7.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -4218,7 +4336,7 @@ public void VCF_PivotFiles(String scriptPath, String directoryPath, String rLib,
         });
 
         add9.setFont(new java.awt.Font("Liberation Sans", 1, 18)); // NOI18N
-        add9.setIcon(new javax.swing.ImageIcon(System.getProperty("user.dir").concat("/images/plusSs.png"))); // NOI18N
+        add9.setIcon(new javax.swing.ImageIcon("/home/iffy/NetBeansProjects/NGSGradle/app/images/plusSs.png")); // NOI18N
         add9.setEnabled(false);
         add9.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -4227,7 +4345,7 @@ public void VCF_PivotFiles(String scriptPath, String directoryPath, String rLib,
         });
 
         del9.setFont(new java.awt.Font("Liberation Sans", 1, 18)); // NOI18N
-        del9.setIcon(new javax.swing.ImageIcon(System.getProperty("user.dir").concat("/images/removeSs.png"))); // NOI18N
+        del9.setIcon(new javax.swing.ImageIcon("/home/iffy/NetBeansProjects/NGSGradle/app/images/removeSs.png")); // NOI18N
         del9.setEnabled(false);
         del9.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -4551,7 +4669,7 @@ public void VCF_PivotFiles(String scriptPath, String directoryPath, String rLib,
         jLabel12.setText("--filter-name");
 
         del3.setFont(new java.awt.Font("Liberation Sans", 1, 18)); // NOI18N
-        del3.setIcon(new javax.swing.ImageIcon(System.getProperty("user.dir").concat("/images/removeSs.png"))); // NOI18N
+        del3.setIcon(new javax.swing.ImageIcon("/home/iffy/NetBeansProjects/NGSGradle/app/images/removeSs.png")); // NOI18N
         del3.setEnabled(false);
         del3.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -4560,7 +4678,7 @@ public void VCF_PivotFiles(String scriptPath, String directoryPath, String rLib,
         });
 
         add1.setFont(new java.awt.Font("Liberation Sans", 1, 18)); // NOI18N
-        add1.setIcon(new javax.swing.ImageIcon(System.getProperty("user.dir").concat("/images/plusSs.png"))); // NOI18N
+        add1.setIcon(new javax.swing.ImageIcon("/home/iffy/NetBeansProjects/NGSGradle/app/images/plusSs.png")); // NOI18N
         add1.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 add1ActionPerformed(evt);
@@ -4596,6 +4714,11 @@ public void VCF_PivotFiles(String scriptPath, String directoryPath, String rLib,
         vepRadio.setFont(new java.awt.Font("Liberation Sans", 1, 15)); // NOI18N
         vepRadio.setForeground(new java.awt.Color(255, 255, 255));
         vepRadio.setText("VEP");
+        vepRadio.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                vepRadioActionPerformed(evt);
+            }
+        });
 
         jLabel1.setFont(new java.awt.Font("Liberation Sans", 1, 15)); // NOI18N
         jLabel1.setForeground(new java.awt.Color(255, 255, 255));
@@ -4605,9 +4728,14 @@ public void VCF_PivotFiles(String scriptPath, String directoryPath, String rLib,
         snpEffvepRadio.setForeground(new java.awt.Color(255, 255, 255));
         snpEffvepRadio.setSelected(true);
         snpEffvepRadio.setText("Both");
+        snpEffvepRadio.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                snpEffvepRadioActionPerformed(evt);
+            }
+        });
 
         add8.setFont(new java.awt.Font("Liberation Sans", 1, 18)); // NOI18N
-        add8.setIcon(new javax.swing.ImageIcon(System.getProperty("user.dir").concat("/images/plusSs.png"))); // NOI18N
+        add8.setIcon(new javax.swing.ImageIcon("/home/iffy/NetBeansProjects/NGSGradle/app/images/plusSs.png")); // NOI18N
         add8.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 add8ActionPerformed(evt);
@@ -4617,9 +4745,14 @@ public void VCF_PivotFiles(String scriptPath, String directoryPath, String rLib,
         snpEffRadio.setFont(new java.awt.Font("Liberation Sans", 1, 15)); // NOI18N
         snpEffRadio.setForeground(new java.awt.Color(255, 255, 255));
         snpEffRadio.setText("snpEff");
+        snpEffRadio.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                snpEffRadioActionPerformed(evt);
+            }
+        });
 
         del1.setFont(new java.awt.Font("Liberation Sans", 1, 18)); // NOI18N
-        del1.setIcon(new javax.swing.ImageIcon(System.getProperty("user.dir").concat("/images/removeSs.png"))); // NOI18N
+        del1.setIcon(new javax.swing.ImageIcon("/home/iffy/NetBeansProjects/NGSGradle/app/images/removeSs.png")); // NOI18N
         del1.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 del1ActionPerformed(evt);
@@ -4661,7 +4794,7 @@ public void VCF_PivotFiles(String scriptPath, String directoryPath, String rLib,
         jLabel23.setText("Variant Filteration  after Annotation (SnpSIFT):");
 
         add2.setFont(new java.awt.Font("Liberation Sans", 1, 18)); // NOI18N
-        add2.setIcon(new javax.swing.ImageIcon(System.getProperty("user.dir").concat("/images/plusSs.png"))); // NOI18N
+        add2.setIcon(new javax.swing.ImageIcon("/home/iffy/NetBeansProjects/NGSGradle/app/images/plusSs.png")); // NOI18N
         add2.setEnabled(false);
         add2.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -4689,7 +4822,7 @@ public void VCF_PivotFiles(String scriptPath, String directoryPath, String rLib,
         });
 
         del5.setFont(new java.awt.Font("Liberation Sans", 1, 18)); // NOI18N
-        del5.setIcon(new javax.swing.ImageIcon(System.getProperty("user.dir").concat("/images/removeSs.png"))); // NOI18N
+        del5.setIcon(new javax.swing.ImageIcon("/home/iffy/NetBeansProjects/NGSGradle/app/images/removeSs.png")); // NOI18N
         del5.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 del5ActionPerformed(evt);
@@ -4697,7 +4830,7 @@ public void VCF_PivotFiles(String scriptPath, String directoryPath, String rLib,
         });
 
         add3.setFont(new java.awt.Font("Liberation Sans", 1, 18)); // NOI18N
-        add3.setIcon(new javax.swing.ImageIcon(System.getProperty("user.dir").concat("/images/plusSs.png"))); // NOI18N
+        add3.setIcon(new javax.swing.ImageIcon("/home/iffy/NetBeansProjects/NGSGradle/app/images/plusSs.png")); // NOI18N
         add3.setEnabled(false);
         add3.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -4726,7 +4859,7 @@ public void VCF_PivotFiles(String scriptPath, String directoryPath, String rLib,
         jScrollPane13.setViewportView(variantFilterTxtA);
 
         snpSiftCombobox.setEditable(true);
-        snpSiftCombobox.setModel(new javax.swing.DefaultComboBoxModel<>(snpSiftFilters));
+        snpSiftCombobox.setModel(new javax.swing.DefaultComboBoxModel<>(combinedFilters));
 
         jLabel25.setFont(new java.awt.Font("Liberation Sans", 1, 15)); // NOI18N
         jLabel25.setForeground(new java.awt.Color(255, 255, 255));
@@ -4742,7 +4875,7 @@ public void VCF_PivotFiles(String scriptPath, String directoryPath, String rLib,
         jLabel15.setText("--assembly:");
 
         add4.setFont(new java.awt.Font("Liberation Sans", 1, 18)); // NOI18N
-        add4.setIcon(new javax.swing.ImageIcon(System.getProperty("user.dir").concat("/images/plusSs.png"))); // NOI18N
+        add4.setIcon(new javax.swing.ImageIcon("/home/iffy/NetBeansProjects/NGSGradle/app/images/plusSs.png")); // NOI18N
         add4.setEnabled(false);
         add4.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -4752,7 +4885,7 @@ public void VCF_PivotFiles(String scriptPath, String directoryPath, String rLib,
 
         jLabel35.setFont(new java.awt.Font("Liberation Sans", 1, 15)); // NOI18N
         jLabel35.setForeground(new java.awt.Color(255, 255, 255));
-        jLabel35.setText("Filter String:");
+        jLabel35.setText("Filter String: Do not delete [SNPEFF] or [VEP] tags. Write/select your expressions directly below or beside each tag header.");
         jLabel35.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent evt) {
                 jLabel35MouseClicked(evt);
@@ -4760,7 +4893,7 @@ public void VCF_PivotFiles(String scriptPath, String directoryPath, String rLib,
         });
 
         del2.setFont(new java.awt.Font("Liberation Sans", 1, 18)); // NOI18N
-        del2.setIcon(new javax.swing.ImageIcon(System.getProperty("user.dir").concat("/images/removeSs.png"))); // NOI18N
+        del2.setIcon(new javax.swing.ImageIcon("/home/iffy/NetBeansProjects/NGSGradle/app/images/removeSs.png")); // NOI18N
         del2.setEnabled(false);
         del2.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -4769,7 +4902,7 @@ public void VCF_PivotFiles(String scriptPath, String directoryPath, String rLib,
         });
 
         del4.setFont(new java.awt.Font("Liberation Sans", 1, 18)); // NOI18N
-        del4.setIcon(new javax.swing.ImageIcon(System.getProperty("user.dir").concat("/images/removeSs.png"))); // NOI18N
+        del4.setIcon(new javax.swing.ImageIcon("/home/iffy/NetBeansProjects/NGSGradle/app/images/removeSs.png")); // NOI18N
         del4.setEnabled(false);
         del4.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -4787,7 +4920,7 @@ public void VCF_PivotFiles(String scriptPath, String directoryPath, String rLib,
         });
 
         add5.setFont(new java.awt.Font("Liberation Sans", 1, 18)); // NOI18N
-        add5.setIcon(new javax.swing.ImageIcon(System.getProperty("user.dir").concat("/images/plusSs.png"))); // NOI18N
+        add5.setIcon(new javax.swing.ImageIcon("/home/iffy/NetBeansProjects/NGSGradle/app/images/plusSs.png")); // NOI18N
         add5.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 add5ActionPerformed(evt);
@@ -4795,7 +4928,7 @@ public void VCF_PivotFiles(String scriptPath, String directoryPath, String rLib,
         });
 
         del8.setFont(new java.awt.Font("Liberation Sans", 1, 18)); // NOI18N
-        del8.setIcon(new javax.swing.ImageIcon(System.getProperty("user.dir").concat("/images/removeSs.png"))); // NOI18N
+        del8.setIcon(new javax.swing.ImageIcon("/home/iffy/NetBeansProjects/NGSGradle/app/images/removeSs.png")); // NOI18N
         del8.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 del8ActionPerformed(evt);
@@ -4833,7 +4966,7 @@ public void VCF_PivotFiles(String scriptPath, String directoryPath, String rLib,
         restrictAlleleCombo.setSelectedIndex(1);
 
         add10.setFont(new java.awt.Font("Liberation Sans", 1, 18)); // NOI18N
-        add10.setIcon(new javax.swing.ImageIcon(System.getProperty("user.dir").concat("/images/plusSs.png"))); // NOI18N
+        add10.setIcon(new javax.swing.ImageIcon("/home/iffy/NetBeansProjects/NGSGradle/app/images/plusSs.png")); // NOI18N
         add10.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 add10ActionPerformed(evt);
@@ -4841,7 +4974,7 @@ public void VCF_PivotFiles(String scriptPath, String directoryPath, String rLib,
         });
 
         del10.setFont(new java.awt.Font("Liberation Sans", 1, 18)); // NOI18N
-        del10.setIcon(new javax.swing.ImageIcon(System.getProperty("user.dir").concat("/images/removeSs.png"))); // NOI18N
+        del10.setIcon(new javax.swing.ImageIcon("/home/iffy/NetBeansProjects/NGSGradle/app/images/removeSs.png")); // NOI18N
         del10.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 del10ActionPerformed(evt);
@@ -5097,7 +5230,7 @@ public void VCF_PivotFiles(String scriptPath, String directoryPath, String rLib,
                 .addGap(19, 19, 19)
                 .addComponent(jLabel35)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jScrollPane13, javax.swing.GroupLayout.PREFERRED_SIZE, 70, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(jScrollPane13, javax.swing.GroupLayout.PREFERRED_SIZE, 178, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap())
         );
 
@@ -5286,7 +5419,7 @@ public void VCF_PivotFiles(String scriptPath, String directoryPath, String rLib,
                         .addComponent(jLabel5)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                         .addComponent(jScrollPane1Tree, javax.swing.GroupLayout.PREFERRED_SIZE, 481, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                .addContainerGap(766, Short.MAX_VALUE))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         visualPanelLayout.setVerticalGroup(
             visualPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -5712,26 +5845,22 @@ public void VCF_PivotFiles(String scriptPath, String directoryPath, String rLib,
 
         } else if (nextBtn.getText().equalsIgnoreCase("Run Pipeline")) {
             if (checkAnalysis()) {
-               
 
-                             VCFHandler(System.getProperty("user.dir").concat("/bin/extract_all_vcfs.sh"), output_Dir.getText(), "*.annH.sift.vcf");
-                     //   VCFHandler(System.getProperty("user.dir").concat("/bin/extract_all_vcfs.sh"), output_Dir.getText(), "*_vep_annH.sift.vcf");
+                if (inputOptions.getSelectedIndex() == 1) {
+                    if (singleRadioButton.isSelected()) {
+                        inputFilesDataS(singlePathMap, selectedKey);
+                    } else if (pairRadioButton.isSelected()) {
+                        inputFilesDataP(pairPathMap, selectedKey);
+                    }
 
-//                if (inputOptions.getSelectedIndex() == 1) {
-//                    if (singleRadioButton.isSelected()) {
-//                        inputFilesDataS(singlePathMap, selectedKey);
-//                    } else if (pairRadioButton.isSelected()) {
-//                        inputFilesDataP(pairPathMap, selectedKey);
-//                    }
-//
-//                    //  runFastq_Variant();
-//                    runBam_Variant();
-//                } else if (inputOptions.getSelectedIndex() == 2) {
-//                    inputFilesDataS(singlePathMap, selectedKey);
-//
-//                    runBam_Variant();
-//                }
-           
+                    //  runFastq_Variant();
+                    runBam_Variant();
+                } else if (inputOptions.getSelectedIndex() == 2) {
+                    inputFilesDataS(singlePathMap, selectedKey);
+
+                    runBam_Variant();
+                }
+
             }//analysisIf
 
         }
@@ -6363,321 +6492,319 @@ public void VCF_PivotFiles(String scriptPath, String directoryPath, String rLib,
             }
         };
     }
-    
-     void HCC_WES(){       
 
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972531_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972532_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972533_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972534_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972535_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972536_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972537_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972538_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972539_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972540_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972541_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972542_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972543_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972544_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972545_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972546_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972547_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972548_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972549_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972550_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972551_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972552_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972553_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972554_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972555_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972556_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972557_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972558_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972559_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972560_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972561_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972562_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972563_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972564_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972565_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972566_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972567_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972568_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972569_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972570_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972571_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972572_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972573_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972574_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972575_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972576_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972577_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972578_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972579_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972580_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972581_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972582_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972583_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972584_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972585_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972586_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972587_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972588_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972589_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972590_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972591_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972592_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972593_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972594_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972595_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972596_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972597_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972598_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972599_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972600_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972601_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972602_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972603_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972604_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972605_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972606_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972607_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972608_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972609_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972610_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972611_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972612_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972613_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972614_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972615_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972616_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972617_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972618_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972619_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972620_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972621_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972622_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972623_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972624_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972625_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972626_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972627_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972628_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972629_1.fastq.gz\"");
-listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972630_1.fastq.gz\"");
+    void HCC_WES() {
 
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972531_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972532_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972533_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972534_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972535_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972536_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972537_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972538_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972539_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972540_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972541_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972542_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972543_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972544_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972545_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972546_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972547_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972548_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972549_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972550_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972551_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972552_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972553_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972554_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972555_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972556_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972557_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972558_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972559_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972560_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972561_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972562_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972563_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972564_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972565_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972566_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972567_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972568_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972569_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972570_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972571_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972572_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972573_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972574_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972575_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972576_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972577_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972578_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972579_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972580_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972581_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972582_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972583_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972584_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972585_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972586_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972587_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972588_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972589_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972590_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972591_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972592_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972593_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972594_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972595_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972596_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972597_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972598_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972599_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972600_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972601_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972602_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972603_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972604_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972605_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972606_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972607_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972608_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972609_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972610_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972611_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972612_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972613_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972614_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972615_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972616_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972617_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972618_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972619_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972620_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972621_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972622_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972623_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972624_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972625_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972626_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972627_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972628_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972629_2.fastq.gz\"");
-listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972630_2.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972531_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972532_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972533_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972534_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972535_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972536_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972537_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972538_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972539_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972540_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972541_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972542_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972543_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972544_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972545_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972546_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972547_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972548_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972549_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972550_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972551_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972552_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972553_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972554_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972555_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972556_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972557_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972558_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972559_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972560_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972561_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972562_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972563_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972564_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972565_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972566_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972567_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972568_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972569_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972570_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972571_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972572_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972573_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972574_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972575_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972576_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972577_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972578_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972579_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972580_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972581_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972582_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972583_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972584_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972585_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972586_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972587_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972588_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972589_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972590_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972591_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972592_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972593_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972594_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972595_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972596_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972597_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972598_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972599_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972600_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972601_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972602_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972603_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972604_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972605_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972606_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972607_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972608_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972609_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972610_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972611_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972612_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972613_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972614_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972615_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972616_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972617_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972618_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972619_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972620_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972621_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972622_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972623_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972624_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972625_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972626_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972627_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972628_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972629_1.fastq.gz\"");
+        listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972630_1.fastq.gz\"");
 
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972531_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972532_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972533_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972534_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972535_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972536_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972537_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972538_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972539_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972540_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972541_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972542_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972543_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972544_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972545_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972546_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972547_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972548_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972549_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972550_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972551_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972552_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972553_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972554_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972555_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972556_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972557_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972558_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972559_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972560_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972561_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972562_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972563_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972564_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972565_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972566_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972567_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972568_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972569_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972570_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972571_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972572_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972573_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972574_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972575_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972576_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972577_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972578_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972579_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972580_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972581_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972582_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972583_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972584_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972585_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972586_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972587_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972588_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972589_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972590_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972591_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972592_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972593_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972594_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972595_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972596_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972597_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972598_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972599_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972600_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972601_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972602_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972603_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972604_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972605_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972606_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972607_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972608_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972609_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972610_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972611_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972612_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972613_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972614_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972615_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972616_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972617_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972618_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972619_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972620_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972621_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972622_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972623_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972624_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972625_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972626_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972627_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972628_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972629_2.fastq.gz\"");
+        listModelreadPair2.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972630_2.fastq.gz\"");
 
+    }//HCC_WES
 
- }//HCC_WES
-     
- public void HCC_RNASeq(){
-     listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972486.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972434.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972487.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972431.star.Aligned.sortedByCoord.out.bam\"");   
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972494.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972496.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972505.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972480.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972461.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972440.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972450.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972426.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972446.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972414.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972419.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972412.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972428.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972427.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972484.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972475.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972443.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972410.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972478.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972490.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972433.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972506.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972465.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972477.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972476.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972442.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972454.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972416.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972421.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972408.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972474.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972479.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972482.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972435.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972504.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972432.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972413.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972409.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972462.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972473.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972467.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972458.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972415.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972471.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972502.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972472.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972448.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972464.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972449.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972488.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972445.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972436.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972483.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972430.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972417.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972453.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972501.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972420.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972451.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972447.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972457.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972411.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972459.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972422.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972452.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972444.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972456.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972429.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972441.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972466.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972407.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972493.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972499.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972469.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972485.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972438.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972489.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972460.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972495.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972439.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972481.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972497.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972498.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972437.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972492.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972425.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972468.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972500.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972418.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972423.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972503.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972463.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972424.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972470.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972491.star.Aligned.sortedByCoord.out.bam\"");
-listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972455.star.Aligned.sortedByCoord.out.bam\"");
- }    
-    
+    public void HCC_RNASeq() {
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972486.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972434.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972487.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972431.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972494.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972496.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972505.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972480.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972461.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972440.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972450.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972426.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972446.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972414.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972419.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972412.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972428.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972427.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972484.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972475.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972443.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972410.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972478.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972490.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972433.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972506.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972465.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972477.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972476.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972442.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972454.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972416.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972421.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972408.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972474.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972479.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972482.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972435.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972504.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972432.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972413.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972409.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972462.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972473.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972467.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972458.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972415.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972471.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972502.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972472.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972448.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972464.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972449.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972488.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972445.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972436.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972483.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972430.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972417.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972453.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972501.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972420.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972451.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972447.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972457.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972411.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972459.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972422.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972452.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972444.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972456.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972429.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972441.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972466.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972407.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972493.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972499.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972469.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972485.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972438.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972489.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972460.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972495.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972439.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972481.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972497.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972498.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972437.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972492.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972425.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972468.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972500.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972418.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972423.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972503.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972463.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972424.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972470.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972491.star.Aligned.sortedByCoord.out.bam\"");
+        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972455.star.Aligned.sortedByCoord.out.bam\"");
+    }
+
     private void jLabel2MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jLabel2MouseClicked
 
-      //  output_Dir.setText("/media/nigab/sdc1/Wajya/Iffat/Output_WESsNew");
+        //  output_Dir.setText("/media/nigab/sdc1/Wajya/Iffat/Output_WESsNew");
         output_Dir.setText("/home/iffy/PhD_Data/CASESTUDY/1-Hepatocellular_carcinoma_100/WES_PRJNA866195/VCF_WESsNew/");
         HCC_WES();
 //output_Dir.setText("/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/VariantCalling_RNASeq1");
@@ -7172,25 +7299,107 @@ listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972455
         String txtContent = variantFilterTxtA.getText();
         String selectedExpr = (String) snpSiftCombobox.getSelectedItem();
 
-        if (selectedExpr != null && !selectedExpr.isBlank()) {
-            String txtAdd = selectedExpr.toUpperCase() + " ";
-            if (!txtContent.contains(txtAdd)) {
-                variantFilterTxtA.append(txtAdd);
+//        if (selectedExpr != null && !selectedExpr.isBlank()) {
+//            String txtAdd = selectedExpr.toUpperCase() + " ";
+//            if (!txtContent.contains(txtAdd)) {
+//                variantFilterTxtA.append(txtAdd);
+//            }
+//        }
+//CorrectionDone
+        if (selectedExpr == null || selectedExpr.isBlank()) {
+            return;
+        }
+
+        // Skip divider headers inside the combobox if clicked
+        if (selectedExpr.startsWith("---")) {
+            return;
+        }
+
+        String exprToAdd = selectedExpr.trim() + " ";
+
+        // Prevent duplicate entries
+        if (txtContent.contains(selectedExpr.trim())) {
+            return;
+        }
+
+        // Check if both tags exist in the text area
+        if (txtContent.contains("[SNPEFF]") && txtContent.contains("[VEP]")) {
+
+            // Auto-route SnpEff specific expressions to [SNPEFF] section
+            if (selectedExpr.startsWith("ANN[*]")) {
+                insertUnderTag("[SNPEFF]", exprToAdd);
+            } // Auto-route VEP specific expressions to [VEP] section
+            else if (selectedExpr.startsWith("CSQ[*]")) {
+                insertUnderTag("[VEP]", exprToAdd);
+            } // For generic options (QUAL > 30, FILTER = 'PASS', etc.), insert at caret or end
+            else {
+                insertAtCaretOrEnd(exprToAdd);
             }
+        } else {
+            // Single option mode (no tags present)
+            variantFilterTxtA.append(exprToAdd);
         }
     }//GEN-LAST:event_add8ActionPerformed
 
+    private void insertUnderTag(String tag, String exprToAdd) {
+    String text = variantFilterTxtA.getText();
+    int tagIndex = text.indexOf(tag);
+
+    if (tagIndex != -1) {
+        // Find end of line after the tag
+        int lineEnd = text.indexOf("\n", tagIndex);
+        if (lineEnd == -1) {
+            lineEnd = text.length();
+        }
+
+        StringBuilder sb = new StringBuilder(text);
+        // Insert expression on a new line right after the tag header
+        sb.insert(lineEnd, exprToAdd);
+        variantFilterTxtA.setText(sb.toString());
+    } else {
+        variantFilterTxtA.append(  exprToAdd);
+    }
+}
+private void insertAtCaretOrEnd(String exprToAdd) {
+    int caretPos = variantFilterTxtA.getCaretPosition();
+    String text = variantFilterTxtA.getText();
+
+    if (caretPos >= 0 && caretPos <= text.length()) {
+        StringBuilder sb = new StringBuilder(text);
+        sb.insert(caretPos, exprToAdd);
+        variantFilterTxtA.setText(sb.toString());
+        variantFilterTxtA.setCaretPosition(caretPos + exprToAdd.length());
+    } else {
+        variantFilterTxtA.append(exprToAdd);
+    }
+}    
+    
     private void del8ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_del8ActionPerformed
         String txtContent = variantFilterTxtA.getText();
         String selectedExpr = (String) snpSiftCombobox.getSelectedItem();
 
-        if (selectedExpr != null && !selectedExpr.isBlank()) {
-            String txtDel = selectedExpr.toUpperCase() + " ";
-            if (txtContent.contains(txtDel)) {
-                txtContent = txtContent.replace(txtDel, "");
-                variantFilterTxtA.setText(txtContent);
-            }
-        }
+//        if (selectedExpr != null && !selectedExpr.isBlank()) {
+//            String txtDel = selectedExpr.toUpperCase() + " ";
+//            if (txtContent.contains(txtDel)) {
+//                txtContent = txtContent.replace(txtDel, "");
+//                variantFilterTxtA.setText(txtContent);
+//            }
+//        }
+//CorrectionDone
+if (selectedExpr == null || selectedExpr.isBlank()) {
+        return;
+    }
+
+    String targetTrimmed = selectedExpr.trim();
+
+    // Search and remove the expression regardless of extra spaces around it
+    if (txtContent.contains(targetTrimmed)) {
+        // Removes target expression and trailing space if present
+        txtContent = txtContent.replace(targetTrimmed + " ", "")
+                               .replace(targetTrimmed, "");
+        variantFilterTxtA.setText(txtContent);
+    }
+
     }//GEN-LAST:event_del8ActionPerformed
 
     private void jLabel28MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jLabel28MouseClicked
@@ -7222,19 +7431,19 @@ listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972455
         // For WES Variant Calling
         selectVariantTxt.setText("--select-type-to-include SNP --select-type-to-include INDEL --select-type-to-include MNP --select-type-to-include MIXED    --select 'AF[0] >= 0.01'");
         variantFilterTxtB.setText("--filter-name \"WES_HardFilter\" --filter-expression \"QD < 2.0 || FS > 200.0 || MQ < 40.0\" ");
-        variantFilterTxtA.setText("'!(ANN[*].EFFECT has \"intergenic_region\") & !(ANN[*].EFFECT has \"intron_variant\") & !(ANN[*].EFFECT has \"synonymous_variant\") & (AF >= 0.01)'");
+        variantFilterTxtA.setText("[SNPEFF]  !(ANN[*].EFFECT has 'intergenic_region') & !(ANN[*].EFFECT has 'intron_variant') & !(ANN[*].EFFECT has 'synonymous_variant') & (exists AF) & (AF[*] >= 0.01) \n "
+                + "[VEP] !(CSQ[*] =~ 'intergenic_region|intron_variant|synonymous_variant') && (exists AF) && (AF[*] >= 0.01) ");
         // For RNA-Seq Variant Calling
-     //selectVariantTxt.setText("--select-type-to-include SNP --select-type-to-include INDEL --select-type-to-include MNP --select-type-to-include MIXED    --select 'AF[0] >= 0.01'");
-       // variantFilterTxtB.setText("--filter-name \"RNASeq_HardFilter\" --filter-expression \"QD < 2.0 || FS > 30.0 || SOR > 3.0 || MQ < 40.0 || DP < 10\" ");
+        //selectVariantTxt.setText("--select-type-to-include SNP --select-type-to-include INDEL --select-type-to-include MNP --select-type-to-include MIXED    --select 'AF[0] >= 0.01'");
+        // variantFilterTxtB.setText("--filter-name \"RNASeq_HardFilter\" --filter-expression \"QD < 2.0 || FS > 30.0 || SOR > 3.0 || MQ < 40.0 || DP < 10\" ");
         //variantFilterTxtA.setText("'!(ANN[*].EFFECT has \"intergenic_region\") & !(ANN[*].EFFECT has \"intron_variant\") ");
 
-     //  variantFilterTxtA.setText("\"((ANN[*].EFFECT has 'missense_variant') | (ANN[*].EFFECT has 'frameshift_variant') | (ANN[*].EFFECT has 'stop_gained')) & isVariant & (VT = 'SNP')\"");
+        //  variantFilterTxtA.setText("\"((ANN[*].EFFECT has 'missense_variant') | (ANN[*].EFFECT has 'frameshift_variant') | (ANN[*].EFFECT has 'stop_gained')) & isVariant & (VT = 'SNP')\"");
 //           refTxt.setText("/home/iffy/TestFiles/MouseExample/INPUTS/mm9.fa");
 //        listKnownSites.addElement("/home/iffy/TestFiles/MouseExample/INPUTS/vcf/00-common_all.vcf.gz");
 //        selectVariantTxt.setText("--select-type-to-include SNP --select-type-to-include INDEL");
 //        variantFilterTxtB.setText("--filter-name AlleleFrequence --filter-expression \" AF < 0.01\" ");
 //        variantFilterTxtA.setText("\"((ANN[*].EFFECT has 'missense_variant') | (ANN[*].EFFECT has 'frameshift_variant') | (ANN[*].EFFECT has 'stop_gained')) & isVariant & (VT = 'SNP')\"");
-
 
     }//GEN-LAST:event_jLabel28MouseClicked
 
@@ -7519,6 +7728,32 @@ listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972455
         }
 
     }//GEN-LAST:event_del10ActionPerformed
+
+    private void snpEffRadioActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_snpEffRadioActionPerformed
+        jLabel35.setText("Filter String for snpEff:");
+        snpSiftCombobox.setModel(new DefaultComboBoxModel<>(snpSiftFilters));
+        variantFilterTxtA.setText("!(ANN[*].EFFECT has 'intergenic_region') & !(ANN[*].EFFECT has 'intron_variant') & !(ANN[*].EFFECT has 'synonymous_variant') & (exists AF) & (AF[*] >= 0.01) ");
+    }//GEN-LAST:event_snpEffRadioActionPerformed
+
+    private void vepRadioActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_vepRadioActionPerformed
+        jLabel35.setText("Filter String for VEP:");
+
+        snpSiftCombobox.setModel(new DefaultComboBoxModel<>(snpSiftFiltersVEP));
+        variantFilterTxtA.setText("!(CSQ[*] =~ 'intergenic_region|intron_variant|synonymous_variant') && (exists AF) && (AF[*] >= 0.01)");
+    }//GEN-LAST:event_vepRadioActionPerformed
+
+    private void snpEffvepRadioActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_snpEffvepRadioActionPerformed
+        jLabel35.setText("Filter String: Do not delete [SNPEFF] or [VEP] tags. Write/select your expressions directly below or beside each tag header.");
+        snpSiftCombobox.setModel(new DefaultComboBoxModel<>(combinedFilters));
+        variantFilterTxtA.setText("");
+        variantFilterTxtA.append("[SNPEFF]\n\n");
+        variantFilterTxtA.append("!(ANN[*].EFFECT has 'intergenic_region') & !(ANN[*].EFFECT has 'intron_variant') & !(ANN[*].EFFECT has 'synonymous_variant') & (exists AF) & (AF[*] >= 0.01)\n");
+        
+        variantFilterTxtA.append("[VEP]\n\n");
+      variantFilterTxtA.append("!(CSQ[*] =~ 'intergenic_region|intron_variant|synonymous_variant') && (exists AF) && (AF[*] >= 0.01)");
+  
+
+    }//GEN-LAST:event_snpEffvepRadioActionPerformed
 
 
     // Variables declaration - do not modify//GEN-BEGIN:variables

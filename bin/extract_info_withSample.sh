@@ -16,7 +16,7 @@ if [[ ! -r "$INPUT_VCF" ]]; then
   exit 1
 fi
 
-# 🧬 Extract sample name (column after FORMAT in the #CHROM header line)
+#  Extract sample name (column after FORMAT in the #CHROM header line)
 SAMPLE_NAME=$(grep -m1 '^#CHROM' "$INPUT_VCF" | awk '{print $10}')
 if [[ -z "${SAMPLE_NAME:-}" ]]; then
   echo "⚠️  Could not detect sample name (no FORMAT/sample column found)"
@@ -46,16 +46,16 @@ FIELDS_PART=$(echo "$FIELDS_PART" | sed "s/^'//; s/'$//; s/ *| */|/g")
 IFS='|' read -r -a ANN_NAMES <<< "$FIELDS_PART"
 N_FIELDS=${#ANN_NAMES[@]}
 
-# 🧾 Write header (add Sample column at the end)
+# Write header (add Sample column at the end)
 printf 'CHROM\tPOS\tREF\tALT' > "$OUTPUT_TSV"
 for name in "${ANN_NAMES[@]}"; do
   name=$(echo "$name" | sed -E 's/[ \/]+/_/g; s/[^A-Za-z0-9_.-]/_/g; s/^_+|_+$//g')
   printf '\t%s' "$name" >> "$OUTPUT_TSV"
 done
-#printf '\tSample\n' >> "$OUTPUT_TSV"
+
 printf '\tZygosity\tSample\n' >> "$OUTPUT_TSV"
 
-# 🧩 Extract and write data rows
+# Extract and write data rows
 awk -v nfields="$N_FIELDS" -v sample="$SAMPLE_NAME" 'BEGIN{OFS="\t"}
   /^#/ { next }
   {

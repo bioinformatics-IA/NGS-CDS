@@ -240,8 +240,7 @@ public class App extends javax.swing.JFrame {
         //PROGRESSBAR
         UIManager.put("ProgressBar.background", Color.WHITE);
         UIManager.put("ProgressBar.foreground", Color.BLUE);
-//UIManager.put("ProgressBar.selectionBackground", Color.RED);
-//UIManager.put("ProgressBar.selectionForeground", Color.GREEN);
+        downloadR.setEnabled(false);
 
         ////END Progressbar
     }
@@ -969,7 +968,43 @@ dialog = new MainInstallationDialog(this, true);
     }//GEN-LAST:event_jMenuItem17ActionPerformed
 
     private void jMenuItem18ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jMenuItem18ActionPerformed
-        JOptionPane.showMessageDialog(null, "In Progress....\nSupervised by:\n\t Dr. Adnan Ahmed Ansari \nProgrammed By:\n\t Ms. Iffat Anjum \n\t PhD Bioinformatics\n\t NCB,QAU", "About", JOptionPane.INFORMATION_MESSAGE, App.icons[17]);
+  String aboutMessage = "<html><body style='width: 320px; font-family: Segoe UI, sans-serif; padding: 4px;'>"
+        + "<div style='background-color: #F7FAFC; border-radius: 6px; padding: 10px; border: 1px solid #E2E8F0;'>"
+        + "  <h2 style='color: #1A365D; margin: 0; font-size: 16px;'>NGS-CDS</h2>"
+        + "  <p style='color: #4A5568; font-size: 10px; margin: 2px 0 0 0;'><i>NGS Cancer Diagnostic Suite</i></p>"
+        + "</div>"
+        + "<table style='font-size: 11px; color: #2D3748; margin-top: 12px; border-collapse: collapse;' cellpadding='2'>"
+        + "  <tr>"
+        + "    <td style='vertical-align: top; font-weight: bold; color: #4A5568; padding-right: 12px;'>Supervised By:</td>"
+        + "    <td><b style='color: #2D3748;'>Dr. Adnan Ahmed Ansari</b></td>"
+        + "  </tr>"
+        + "  <tr><td colspan='2' style='height: 8px;'></td></tr>"
+        + "  <tr>"
+        + "    <td style='vertical-align: top; font-weight: bold; color: #4A5568; padding-right: 12px;'>Programmed By:</td>"
+        + "    <td>"
+        + "      <b style='color: #2D3748;'>Ms. Iffat Anjum</b><br/>"
+        + "      <span style='color: #718096; font-size: 10px;'>Ph.D. Researcher in Bioinformatics</span><br/>"
+        + "      <span style='color: #718096; font-size: 10px;'>National Center for Bioinformatics (NCB)</span><br/>"
+        + "      <span style='color: #718096; font-size: 10px;'>Quaid-i-Azam University (QAU)</span>"
+        + "      <div style='margin-top: 4px;'><span style='color: #2B6CB0; font-size: 10px;'><b>Email:</b> iffat.anjum@msn.com</span></div>"
+        + "    </td>"
+        + "  </tr>"
+        + "</table>"
+        + "<hr style='border: 0; border-top: 1px solid #E2E8F0; margin-top: 12px;'/>"
+        + "<p style='font-size: 9px; color: #A0AEC0; text-align: right; margin: 4px 0 0 0;'>Version 1.0.0 &bull; In Active Development</p>"
+        + "</body></html>";
+JOptionPane.showMessageDialog(
+    null, 
+    aboutMessage, 
+    "About NGS-CDS", 
+    JOptionPane.INFORMATION_MESSAGE, 
+    App.icons[17]
+);
+        
+        
+        
+        
+   //     JOptionPane.showMessageDialog(null, "In Progress....\nSupervised by:\n\t Dr. Adnan Ahmed Ansari \nProgrammed By:\n\t Ms. Iffat Anjum \n\t PhD Bioinformatics\n\t NCB,QAU", "About", JOptionPane.INFORMATION_MESSAGE, App.icons[17]);
     }//GEN-LAST:event_jMenuItem18ActionPerformed
 
     private void jMenuItem19ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jMenuItem19ActionPerformed
@@ -1155,6 +1190,9 @@ rpackageDialog.setVisible(true);
         } catch (javax.swing.UnsupportedLookAndFeelException ex) {
             java.util.logging.Logger.getLogger(App.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         }
+
+
+
 //        //</editor-fold>
         //</editor-fold>
 

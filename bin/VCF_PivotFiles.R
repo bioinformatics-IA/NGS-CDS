@@ -5,10 +5,22 @@ myargs = commandArgs(trailingOnly=TRUE)
 # myargs[1]="/home/iffy/PhD_Data/CASESTUDY/1-Hepatocellular_carcinoma_100/WES_PRJNA866195/VCF_WESsNew/"   # 1: Output Directory
 # myargs[2]="/home/iffy/NetBeansProjects/NGSGradle/app/R_Libraries" # 2: Lib Path
 # myargs[3]= "/home/iffy/PhD_Data/CASESTUDY/1-Hepatocellular_carcinoma_100/WES_PRJNA866195/VCF_WESsNew/mergedLong_annH_sift_all.tsv"
+# myargs[4]="markdownfile path"
+# Parse target TSV argument
+target_tsv <- myargs[3]
 
+# Extract filename (e.g., "mergedLong_annH_sift_all.tsv")
+tsv_filename <- basename(target_tsv)
+
+# Remove extension (e.g., "mergedLong_annH_sift_all")
+tsv_name_no_ext <- tools::file_path_sans_ext(tsv_filename)
+
+# Extract suffix after 'mergedLong_' (e.g., "annH_sift_all")
+suffix <- sub("^mergedLong_", "", tsv_name_no_ext)
 
 setwd(file.path(myargs[1]))
-plots_dir <- file.path(getwd(), "plots")
+plots_dir_name <- paste0("plots_", suffix)
+plots_dir <- file.path(getwd(), plots_dir_name )
 dir.create(plots_dir, showWarnings = FALSE, recursive = TRUE)
 # -------------------------------
 
@@ -20,7 +32,7 @@ old_libraries <- .libPaths()
 required_libs <- c("tidyverse", "readr", "scales", "pheatmap", "RColorBrewer","Cairo",
                    "matrixStats","stringr","purrr","dplyr","ComplexHeatmap","circlize","grid",
                    "png", "ggrepel","tidyr","openxlsx",
-                   "rmarkdown", "tinytex" #Packages for pdf report
+                   "rmarkdown", "tinytex", "tools" #Packages for pdf report
                    )
 
 
@@ -166,11 +178,84 @@ protein_prevalence_unfiltered_all <- df %>%
   ) %>%
     arrange(desc(Sample_Count), desc(Gene_Name))
 
+# =============================================================================
+# CATEGORY 4: COMPREHENSIVE VARIANT METRICS (WITH GENE-LEVEL TOTALS)
+# =============================================================================
+cat("Building Comprehensive Variant-Level Summary Sheet with Gene Totals...\n")
+
+comprehensive_variant_summary <- df %>%
+  filter(!is.na(Gene_Name) & Gene_Name != ".") %>%
+  # 1. First calculate gene-level total unique sample count across the whole cohort
+  group_by(Gene_Name) %>%
+  mutate(Gene_Mutated_Samples_Total = n_distinct(Sample)) %>%
+  ungroup() %>%
+  
+  # 2. Now group by specific variant attributes
+  group_by(
+    Gene_Name, 
+    Gene_Mutated_Samples_Total,
+    Annotation, 
+    Annotation_Impact, 
+    Mutation_ID, 
+    HGVS.p
+  ) %>%
+  # 3. Aggregate metrics at the specific variant level
+  summarise(
+    Variant_Mutated_Samples = n_distinct(Sample),
+    Variant_Record_Count    = n(),
+    .groups = 'drop'
+  ) %>%
+  rename(Genomic_Coordinates = Mutation_ID) %>%
+  
+  # 4. Order columns clearly for easy reading
+  select(
+    Gene_Name, 
+    Gene_Mutated_Samples_Total,   # Gene-level cohort total (e.g., 8)
+    Annotation, 
+    Annotation_Impact, 
+    Variant_Mutated_Samples,      # Variant-level cohort total (e.g., 2)
+    Variant_Record_Count, 
+    Genomic_Coordinates, 
+    HGVS.p
+  ) %>%
+  # Sort by top mutated genes, then top variants within those genes
+  arrange(desc(Gene_Mutated_Samples_Total), desc(Variant_Mutated_Samples), Gene_Name)
+
+#filter_log_file <- file.path(myargs[1], "filtration_counts.csv")
+
+output_dir   <- myargs[1]
+target_tsv   <- myargs[3] # e.g., ".../mergedLong_vep_annH_sift_all.tsv"
+filter_csv   <- file.path(output_dir, "filtration_counts.csv")
+
+# Detect run type from TSV filename
+active_stage <- NULL
+if (grepl("_vep_annH_sift_all\\.tsv$", target_tsv)) {   active_stage <- "Germline_VEP" } else if (grepl("_annH_sift_all\\.tsv$", target_tsv)) {
+  active_stage <- "Germline_SnpEff"
+} else if (grepl("_vep_annM_sift_all\\.tsv$", target_tsv)) {   active_stage <- "Somatic_VEP" } else if (grepl("_annM_sift_all\\.tsv$", target_tsv)) {
+  active_stage <- "Somatic_SnpEff"
+}
+
+# Extract relevant filtration counts for the RMarkdown report
+filter_data_current <- NULL
+
+if (file.exists(filter_csv) && !is.null(active_stage)) {
+  raw_counts <- read.csv(filter_csv, stringsAsFactors = FALSE, check.names = FALSE)
+  
+  # Filter sample rows and the specific sub-total for THIS active stage
+  filter_data_current <- raw_counts %>%
+    filter(Pipeline_Stage == active_stage | Sample == paste0("TOTAL_", active_stage))
+}
+
+print ("Correction Done: ")
+print(filter_data_current)
+#print(active_stage)
+
 # Save the required data structures for the Rmd report
 save(
   df,total_patients, per_sample_count, gene_penetrance, genomic_frequencies,
    mutation_types_gene, high_impact, 
-  gene_sample_matrix, protein_prevalence_all,protein_prevalence_unfiltered_all, plots_dir,
+  gene_sample_matrix, protein_prevalence_all,protein_prevalence_unfiltered_all,
+  filter_data_current, active_stage, plots_dir,
   file = file.path(myargs[1], "report_data.RData")
 )
 
@@ -248,36 +333,35 @@ addWorksheet(wb, "10. All Protein Alterations")
 writeData(wb, "10. All Protein Alterations", protein_prevalence_unfiltered_all)
 addStyle(wb, "10. All Protein Alterations", style = header_style, rows = 1, cols = 1:ncol(protein_prevalence_unfiltered_all))
 
+# --- Tab 11: Detailed Variant Summary (Requested Sheet) ---
+addWorksheet(wb, "11. Detailed Variant Summary")
+writeData(wb, "11. Detailed Variant Summary", comprehensive_variant_summary)
+addStyle(wb, "11. Detailed Variant Summary", style = header_style, rows = 1, cols = 1:ncol(comprehensive_variant_summary))
+
 # --- Final Layout Tuning ---
 # Auto-adjust column tracking spacing across every tab cleanly
 for(sheet in names(wb)){
   setColWidths(wb, sheet, cols = 1:ncol(df), widths = "auto")
 }
 
-# Save consolidated workbook
-saveWorkbook(wb, "Genomic_Cohort_Analysis_Report.xlsx", overwrite = TRUE)
-cat("Success: All tracking metrics exported into single unified workbook: Genomic_Cohort_Analysis_Report.xlsx\n")
-
 #--------------------------------
 # WRITTEN NARRATIVE PDF REPORT COMPILATION
 # =============================================================================
 cat("Compiling narrative written analysis into a PDF report...\n")
-my_data_file <- file.path(myargs[1], "report_data.RData")
-rmarkdown::render(
-  input = "/home/iffy/NetBeansProjects/NGSGradle/app/bin/genomic_report.Rmd",
-  output_file = file.path(myargs[1], "Genomic_Cohort_Summary.pdf"),
-  params      = list(rdata_path = my_data_file,
-                     lib_path   = myargs[2])
- )
-
-cat("Success: Text-based narrative evaluation generated as 'Genomic_Cohort_Summary.pdf'\n")
-#-------------------------------
+# Extract raw file basename (e.g., "mergedLong_annH_sift_all")
+raw_filename <- tools::file_path_sans_ext(basename(myargs[3]))
+# Clean name: remove "mergedLong_" prefix and "_sift_all" / "_all" suffix
+clean_tag <- raw_filename %>%
+  sub("^mergedLong_", "", .) %>%      # Remove prefix
+  sub("_sift_all$", "", .) %>%        # Remove _sift_all suffix
+  sub("_all$", "", .)                 # Fallback in case suffix is just _all
 
 
+# Save consolidated workbook
+excel_output_name <- paste0("Genomic_Cohort_Report_", clean_tag, ".xlsx")
+saveWorkbook(wb, file.path(myargs[1], excel_output_name), overwrite = TRUE)
 
-
-
-
+cat("Success: All tracking metrics exported into single unified workbook: Genomic_Cohort_Report_", clean_tag, ".xlsx\n", sep = "")
 
 
 #-------------------------------------------------------------------------------
@@ -472,6 +556,7 @@ ggplot(plot_df, aes(x = Mutation_ID, y = n)) +
     aes(x = Mutation_ID, y = total, label = total_label),
     inherit.aes = FALSE, hjust = -0.3, size = 3.5, fontface = "plain"
   ) +
+  scale_x_discrete(labels = function(x) stringr::str_trunc(x, width = 40, side = "right")) +
   scale_fill_manual(values = cols) +
   guides(fill = guide_legend(nrow = 3, byrow = TRUE)) +
   labs(
@@ -2541,4 +2626,23 @@ if (length(image_files) == 0) {
   # Final loop cleanup pass
   gc(verbose = FALSE)
 }
+#------------------------------------------------------------------------------
+#                 MARKDOWNREPORT
+#------------------------------------------------------------------------------
+# Build dynamic output filenames
+output_pdf_name <- paste0("Genomic_Cohort_Summary_", clean_tag, ".pdf")
+output_pdf_path <- file.path(myargs[1], output_pdf_name)
+
+
+my_data_file <- file.path(myargs[1], "report_data.RData")
+
+rmarkdown::render(
+  input = myargs[4],
+   output_file = output_pdf_path,
+  params      = list(rdata_path = my_data_file,
+                     lib_path   = myargs[2])
+)
+
+cat("Success: Text-based narrative evaluation generated as '", output_pdf_name, "'\n", sep = "")
+#-------------------------------
 

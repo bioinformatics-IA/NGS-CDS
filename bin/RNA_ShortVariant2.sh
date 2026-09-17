@@ -40,7 +40,7 @@ snpSift="${snpEff}/SnpSift.jar"
 variantFilterationOp="${20}" #ALL,BA
 selectVariantStr="${21}"
 filterOptionsB="${22}" #String of  Filterexpression, filtername
-filterOptionsA="${23}"
+filterOptionsA="${23}" #Sift Filtering (After)
 
 germSomaticOP="${24}" #Option for GERMLINE or SOMATIC or BOTH
 somaticOP="${25}"  #Somatic Options: TUMORN, TUMORM, TUMORO, TUMORMIT,TUMORFOR
@@ -73,6 +73,62 @@ elif [ "$germSomaticOP" = "BOTH" ]; then
 fi
 ############################################ END PARAMETERS
 
+# Helper function to extract the active filter from $filterOptionsA
+get_active_filter() {
+    raw_input="$1"
+    target_tag="$2" # "SNPEFF" or "VEP"
+
+    # 1. Use Perl to extract everything after [$target_tag] up to the next [SECTION] or end of string
+    extracted=$(echo "$raw_input" | perl -0777 -ne '
+        if (/\[\s*'$target_tag'\s*\]\s*(.*?)(?=\[\s*[A-Za-z0-9_]+\s*\]|\z)/s) {
+            print $1;
+        }
+    ')
+
+    # 2. Fallback to raw_input if no section tag was matched
+    if [ -z "$extracted" ]; then
+        extracted="$raw_input"
+    fi
+
+    # 3. Convert newlines to spaces
+    extracted=$(echo "$extracted" | tr '\n' ' ')
+
+    # 4. Strip leading/trailing whitespaces, closing brackets, single quotes, double quotes, and backticks
+    extracted=$(echo "$extracted" | sed -e 's/^[[:space:]]\]*//' -e 's/^[[:space:]"'\''`]*//' -e 's/[[:space:]"'\''`]*$//')
+
+    echo "$extracted"
+}
+###########################################
+# Function definition and calls
+append_total_summary() {
+    local target_file="$1"
+    if [ -f "$target_file" ] && [ $(wc -l < "$target_file") -gt 1 ]; then
+        awk -F',' '
+        NR > 1 {
+            tool = $2
+            count[tool]++
+            raw[tool] += $4
+            filt[tool] += $5
+            rem[tool] += $6
+            
+            tot_count++
+            tot_raw += $4
+            tot_filt += $5
+            tot_rem += $6
+        }
+        END {
+            for (t in count) {
+                pct = (raw[t] > 0) ? (filt[t] / raw[t]) * 100 : 0
+                printf "TOTAL_%s (%d Samples),%s,SubTotal,%d,%d,%d,%.2f%%\n", t, count[t], t, raw[t], filt[t], rem[t], pct
+            }
+            
+            if (length(count) > 1) {
+                tot_pct = (tot_raw > 0) ? (tot_filt / tot_raw) * 100 : 0
+                printf "TOTAL_COMBINED (%d Records),ALL,Combined,%d,%d,%d,%.2f%%\n", tot_count, tot_raw, tot_filt, tot_rem, tot_pct
+            }
+        }' "$target_file" >> "$target_file"
+    fi
+}
 ### CREATE LOG FILE
 PIPELINE_STATUS_FILE="${OUTPUT_DIR}/VariantPipeline_status.txt"
 
@@ -103,7 +159,8 @@ DICT_FILE="${REFERENCE%.*}.dict"
 if [ ! -f "$DICT_FILE" ]; then
 cd $GATK_PATH
     echo "Sequence dictionary (.dict) not found. Creating now..."
-    ./gatk CreateSequenceDictionary -R "$REFERENCE"
+	#CorrectionDone- Uncomment it later on
+   # ./gatk CreateSequenceDictionary -R "$REFERENCE"
 else
     echo "Sequence dictionary (.dict) already exists."
 fi
@@ -1441,8 +1498,10 @@ if [ "$variantFilterationOp" = "ALL" ]; then
 					if grep -q "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" && grep "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" | grep -q "|snpEff_M"; then
 						# If both sample and stage exist in the file
 						echo "$BAMFILE_NAME: snpEff_M already done. Skipping snpEff..."
+					
 					elif [ "$germSomaticOP" = "SOMATIC" ] || [ "$germSomaticOP" = "BOTH" ]; then
 						echo "Annotating SOMATIC variant: $filename"
+					
 						java -Xmx8g -jar "$snpEff_path" -q -canon -csvStats "${OUTPUT_DIR}${BAMFILE_NAME}.annM.csv" -stats "${OUTPUT_DIR}${BAMFILE_NAME}.annM.html" "$snpEff_db" "$vcfFile" > "${OUTPUT_DIR}${BAMFILE_NAME}.annM.vcf"
 						if [ $? -ne 0 ]; then
 							echo "Error: snpEff failed for $BAMFILE_NAME"
@@ -1459,6 +1518,7 @@ if [ "$variantFilterationOp" = "ALL" ]; then
 						echo "$BAMFILE_NAME: snpEff_H already done. Skipping snpEff..."
 					elif [ "$germSomaticOP" = "GERMLINE" ] || [ "$germSomaticOP" = "BOTH" ]; then
 						echo "Annotating GERMLINE variant: $filename"
+					
 						java -Xmx8g -jar "$snpEff_path" -q -canon -csvStats "${OUTPUT_DIR}${BAMFILE_NAME}.annH.csv" -stats "${OUTPUT_DIR}${BAMFILE_NAME}.annH.html" "$snpEff_db" "$vcfFile" > "${OUTPUT_DIR}${BAMFILE_NAME}.annH.vcf"
 						if [ $? -ne 0 ]; then
 							echo "Error: snpEff failed for $BAMFILE_NAME"
@@ -1683,7 +1743,11 @@ if [ "$variantFilterationOp" = "ALL" ]; then
 	# ALL: STEP 9.: Filteration: snpSIFT
 
 	echo "Performing Filteration after annotation using SnpSIFT..."
-	
+	echo "Debug: ALL $vcfFiles"
+	#CorrectionDone
+	FILTER_LOG_FILE="${OUTPUT_DIR}/filtration_counts.csv"
+	echo "Sample,Pipeline_Stage,Raw_Variants,Filtered_Variants,Removed_Variants,Retention_Pct" > "$FILTER_LOG_FILE"
+		
 	for vcfFile in $vcfFiles; do
 		if [ -f "$vcfFile" ]; then 
 			filename=$(basename "$vcfFile") 
@@ -1697,11 +1761,28 @@ if [ "$variantFilterationOp" = "ALL" ]; then
 				
 					elif [ "$germSomaticOP" = "SOMATIC" ] || [ "$germSomaticOP" = "BOTH" ]; then
 						echo "Annotating SOMATIC variant (EXON): $filename"
-						java -Xmx8g -jar "$snpEff_path" -q -canon -csvStats "${OUTPUT_DIR}${BAMFILE_NAME}_vep_annM.csv" -stats "${OUTPUT_DIR}${BAMFILE_NAME}_vep_annM.html" "$snpEff_db" "$vcfFile" > "${OUTPUT_DIR}${BAMFILE_NAME}_vep_annM.sift.vcf"
+						
+						#CorrectionDone
+						ACTIVE_FILTER=$(get_active_filter "$filterOptionsA" "VEP")
+						# 1. Count raw variants before filtering
+                    	RAW_COUNT=$(grep -vc "^#" "$vcfFile")
+						echo "java -Xmx8g -jar "$snpSift" filter "$ACTIVE_FILTER" "$vcfFile" >  "${OUTPUT_DIR}${BAMFILE_NAME}_vep_annM.sift.vcf""
+						java -Xmx8g -jar "$snpSift" filter "$ACTIVE_FILTER" "$vcfFile" >  "${OUTPUT_DIR}${BAMFILE_NAME}_vep_annM.sift.vcf"
+												
 						if [ $? -ne 0 ]; then
 							echo "Error: SnpSIFT failed for $BAMFILE_NAME"
 							exit 1
 						else
+							# 2. Count variants after SnpSift filtering
+                        	OUT_VCF="${OUTPUT_DIR}${BAMFILE_NAME}_vep_annM.sift.vcf"
+                        	FILTERED_COUNT=$(grep -vc "^#" "$OUT_VCF")
+                        	REMOVED_COUNT=$((RAW_COUNT - FILTERED_COUNT))
+                            RETENTION_PCT="0.00"
+                        	if [ "$RAW_COUNT" -gt 0 ]; then
+                            	RETENTION_PCT=$(awk -v f="$FILTERED_COUNT" -v r="$RAW_COUNT" 'BEGIN {printf "%.2f", (f/r)*100}')
+                        	fi
+	                        # 3. Append counts to CSV log
+                        	echo "${BAMFILE_NAME},Somatic_VEP,${RAW_COUNT},${FILTERED_COUNT},${REMOVED_COUNT},${RETENTION_PCT}\%" >> "$FILTER_LOG_FILE"
 							update_pipeline_status "$BAMFILE_NAME" "SnpSIFT(VEP)_M"
 						fi
 						
@@ -1716,11 +1797,31 @@ if [ "$variantFilterationOp" = "ALL" ]; then
 						echo "$BAMFILE_NAME: SnpSIFT(VEP)_H already done. Skipping SNPSIFT..."
 					elif [ "$germSomaticOP" = "GERMLINE" ] || [ "$germSomaticOP" = "BOTH" ]; then
 						echo "Annotating GERMLINE variant: $filename"
-						java -Xmx8g -jar "$snpEff_path" -q -canon -csvStats "${OUTPUT_DIR}${BAMFILE_NAME}_vep_annH.csv" -stats "${OUTPUT_DIR}${BAMFILE_NAME}_vep_annH.html" "$snpEff_db" "$vcfFile" > "${OUTPUT_DIR}${BAMFILE_NAME}_vep_annH.sift.vcf"
+						#CorrectionDone
+						ACTIVE_FILTER=$(get_active_filter "$filterOptionsA" "VEP")
+						# 1. Count raw variants before filtering
+                    	RAW_COUNT=$(grep -vc "^#" "$vcfFile")
+						
+						echo "FilterOptionsA: $filterOptionsA"
+						echo "ActiveFilter: $ACTIVE_FILTER"
+						echo "java -Xmx8g -jar "$snpSift" filter "$ACTIVE_FILTER" "$vcfFile" > "${OUTPUT_DIR}${BAMFILE_NAME}_vep_annH.sift.vcf""
+						java -Xmx8g -jar "$snpSift" filter "$ACTIVE_FILTER" "$vcfFile" > "${OUTPUT_DIR}${BAMFILE_NAME}_vep_annH.sift.vcf"
+						
 						if [ $? -ne 0 ]; then
 							echo "Error: SnpSIFT failed for $BAMFILE_NAME"
 							exit 1
 						else
+							# 2. Count variants after filtering
+                        	OUT_VCF="${OUTPUT_DIR}${BAMFILE_NAME}_vep_annH.sift.vcf"
+                        	FILTERED_COUNT=$(grep -vc "^#" "$OUT_VCF")
+                        	REMOVED_COUNT=$((RAW_COUNT - FILTERED_COUNT))
+                        	RETENTION_PCT="0.00"
+                        	if [ "$RAW_COUNT" -gt 0 ]; then
+                            	RETENTION_PCT=$(awk -v f="$FILTERED_COUNT" -v r="$RAW_COUNT" 'BEGIN {printf "%.2f", (f/r)*100}')
+                       	 	fi
+
+                        	# 3. Append counts to CSV log
+                        	echo "${BAMFILE_NAME},Germline_VEP,${RAW_COUNT},${FILTERED_COUNT},${REMOVED_COUNT},${RETENTION_PCT}\%" >> "$FILTER_LOG_FILE"
 							update_pipeline_status "$BAMFILE_NAME" "SnpSIFT(VEP)_H"
 						fi
 						
@@ -1734,11 +1835,31 @@ if [ "$variantFilterationOp" = "ALL" ]; then
 						echo "$BAMFILE_NAME: SnpSIFT(snpEff)_M already done. Skipping SNPSIFT..."
 					elif [ "$germSomaticOP" = "SOMATIC" ] || [ "$germSomaticOP" = "BOTH" ]; then
 						echo "Annotating SOMATIC variant (EXON): $filename"
-						java -Xmx8g -jar "$snpEff_path" -q -canon -csvStats "${OUTPUT_DIR}${BAMFILE_NAME}.annM.csv" -stats "${OUTPUT_DIR}${BAMFILE_NAME}.annM.html" "$snpEff_db" "$vcfFile" > "${OUTPUT_DIR}${BAMFILE_NAME}.annM.sift.vcf"
+						#CorrectionDone
+						
+						ACTIVE_FILTER=$(get_active_filter "$filterOptionsA" "SNPEFF")
+						# 1. Count raw variants before filtering
+                    	RAW_COUNT=$(grep -vc "^#" "$vcfFile")
+						
+						echo "java -Xmx8g -jar "$snpSift" filter "$ACTIVE_FILTER" "$vcfFile" > "${OUTPUT_DIR}${BAMFILE_NAME}.annM.sift.vcf""
+						java -Xmx8g -jar "$snpSift" filter "$ACTIVE_FILTER" "$vcfFile" > "${OUTPUT_DIR}${BAMFILE_NAME}.annM.sift.vcf"
+						
 						if [ $? -ne 0 ]; then
 							echo "Error: SnpSIFT failed for $BAMFILE_NAME"
 							exit 1
 						else
+							# 2. Count variants after filtering
+                        	OUT_VCF="${OUTPUT_DIR}${BAMFILE_NAME}.annM.sift.vcf"
+                        	FILTERED_COUNT=$(grep -vc "^#" "$OUT_VCF")
+                        	REMOVED_COUNT=$((RAW_COUNT - FILTERED_COUNT))
+                        
+                        	RETENTION_PCT="0.00"
+                        	if [ "$RAW_COUNT" -gt 0 ]; then
+                            	RETENTION_PCT=$(awk -v f="$FILTERED_COUNT" -v r="$RAW_COUNT" 'BEGIN {printf "%.2f", (f/r)*100}')
+                        	fi
+
+                        	# 3. Append counts to CSV log
+                        	echo "${BAMFILE_NAME},Somatic_SnpEff,${RAW_COUNT},${FILTERED_COUNT},${REMOVED_COUNT},${RETENTION_PCT}\%" >> "$FILTER_LOG_FILE"
 							update_pipeline_status "$BAMFILE_NAME" "SnpSIFT(snpEff)_M"
 						fi
 						
@@ -1752,13 +1873,31 @@ if [ "$variantFilterationOp" = "ALL" ]; then
 					elif [ "$germSomaticOP" = "GERMLINE" ] || [ "$germSomaticOP" = "BOTH" ]; then
 						echo "Annotating GERMLINE variant: $filename"
 						
-						echo "java -Xmx8g -jar "$snpSift" filter "$filterOptionsA" "$vcfFile" > "${OUTPUT_DIR}${BAMFILE_NAME}.annH.sift.vcf""
-						java -Xmx8g -jar "$snpEff_path" -q -canon -csvStats "${OUTPUT_DIR}${BAMFILE_NAME}.annH.csv" -stats "${OUTPUT_DIR}${BAMFILE_NAME}.annH.html" "$snpEff_db" "$vcfFile" > "${OUTPUT_DIR}${BAMFILE_NAME}.annH.sift.vcf"
-
+						#CorrectionDone
+						
+						ACTIVE_FILTER=$(get_active_filter "$filterOptionsA" "SNPEFF")
+						echo "FilterOptionsA: $filterOptionsA"
+						echo "ActiveFilter: $ACTIVE_FILTER"
+						# 1. Count raw variants before filtering
+                    	RAW_COUNT=$(grep -vc "^#" "$vcfFile")
+						
+						echo "java -Xmx8g -jar "$snpSift" filter "$ACTIVE_FILTER" "$vcfFile" > "${OUTPUT_DIR}${BAMFILE_NAME}.annH.sift.vcf""
+						java -Xmx8g -jar "$snpSift" filter "$ACTIVE_FILTER" "$vcfFile" > "${OUTPUT_DIR}${BAMFILE_NAME}.annH.sift.vcf"
+						
 						if [ $? -ne 0 ]; then
 							echo "Error: SnpSIFT failed for $BAMFILE_NAME"
 							exit 1
 						else
+							# 2. Count variants after filtering
+	                        OUT_VCF="${OUTPUT_DIR}${BAMFILE_NAME}.annH.sift.vcf"
+    	                    FILTERED_COUNT=$(grep -vc "^#" "$OUT_VCF")
+        	                REMOVED_COUNT=$((RAW_COUNT - FILTERED_COUNT))
+            	            RETENTION_PCT="0.00"
+                        	if [ "$RAW_COUNT" -gt 0 ]; then
+                            	RETENTION_PCT=$(awk -v f="$FILTERED_COUNT" -v r="$RAW_COUNT" 'BEGIN {printf "%.2f", (f/r)*100}')
+                        	fi
+                	        # 3. Append counts to CSV log
+                    	    echo "${BAMFILE_NAME},Germline_SnpEff,${RAW_COUNT},${FILTERED_COUNT},${REMOVED_COUNT},${RETENTION_PCT}\%" >> "$FILTER_LOG_FILE"
 							update_pipeline_status "$BAMFILE_NAME" "SnpSIFT(snpEff)_H"
 						fi
 						
@@ -1769,6 +1908,42 @@ if [ "$variantFilterationOp" = "ALL" ]; then
 
 		fi
 	done
+
+echo "Appending total summary to the counts file...."
+
+if [ -f "$FILTER_LOG_FILE" ] && [ $(wc -l < "$FILTER_LOG_FILE") -gt 1 ]; then
+    awk -F',' '
+    NR > 1 {
+        stage = $2
+        count[stage]++
+        raw[stage] += $3
+        filt[stage] += $4
+        rem[stage] += $5
+        
+        tot_count++
+        tot_raw += $3
+        tot_filt += $4
+        tot_rem += $5
+    }
+    END {
+        # Print sub-totals per stage tag (e.g. TOTAL_Germline_SnpEff)
+        for (st in count) {
+            pct = (raw[st] > 0) ? (filt[st] / raw[st]) * 100 : 0
+            printf "TOTAL_%s (%d Samples),%s,%d,%d,%d,%.2f%%\n", st, count[st], st, raw[st], filt[st], rem[st], pct
+        }
+        
+        # Print overall combined summary if multiple stages were run
+        if (length(count) > 1) {
+            tot_pct = (tot_raw > 0) ? (tot_filt / tot_raw) * 100 : 0
+            printf "TOTAL_COMBINED (%d Records),Combined,%d,%d,%d,%.2f%%\n", tot_count, tot_raw, tot_filt, tot_rem, tot_pct
+        }
+    }' "$FILTER_LOG_FILE" >> "$FILTER_LOG_FILE"
+fi
+
+
+
+
+
 	echo "++++++++++++++++++++++++++++++++++++ VariantFiltration AFTER COMPLETED +++++++++++++++++++++++++++++++++++++++++"
 
 	##################################
@@ -2123,6 +2298,7 @@ elif [ "$variantFilterationOp" = "BA" ]; then
 	##################################
 	# ALL: STEP 9.4: Filteration: snpSIFT
 	echo "Performing Filteration after annotation using SnpSIFT..."
+	echo "Debug: BA-->Both"
 		for vcfFile in $vcfFiles; do
 		if [ -f "$vcfFile" ]; then 
 			filename=$(basename "$vcfFile") 
@@ -2136,7 +2312,13 @@ elif [ "$variantFilterationOp" = "BA" ]; then
 				
 					elif [ "$germSomaticOP" = "SOMATIC" ] || [ "$germSomaticOP" = "BOTH" ]; then
 						echo "Annotating SOMATIC variant (EXON): $filename"
-						java -Xmx8g -jar "$snpEff_path" -q -canon -csvStats "${OUTPUT_DIR}${BAMFILE_NAME}_vep_annM.csv" -stats "${OUTPUT_DIR}${BAMFILE_NAME}_vep_annM.html" "$snpEff_db" "$vcfFile" > "${OUTPUT_DIR}${BAMFILE_NAME}_vep_annM.sift.vcf"
+						ACTIVE_FILTER=$(get_active_filter "$filterOptionsA" "VEP")
+						echo "java -Xmx8g -jar "$snpSift" filter "'$ACTIVE_FILTER'" "$vcfFile" > "${OUTPUT_DIR}${BAMFILE_NAME}_vep_annM.sift.vcf""
+						java -Xmx8g -jar "$snpSift" filter "'$ACTIVE_FILTER'" "$vcfFile" > "${OUTPUT_DIR}${BAMFILE_NAME}_vep_annM.sift.vcf"
+						
+						#CorrectionDone
+						#java -Xmx8g -jar "$snpEff_path" -q -canon -csvStats "${OUTPUT_DIR}${BAMFILE_NAME}_vep_annM.csv" -stats "${OUTPUT_DIR}${BAMFILE_NAME}_vep_annM.html" "$snpEff_db" "$vcfFile" > "${OUTPUT_DIR}${BAMFILE_NAME}_vep_annM.sift.vcf"
+						
 						if [ $? -ne 0 ]; then
 							echo "Error: SnpSIFT failed for $BAMFILE_NAME"
 							exit 1
@@ -2156,7 +2338,12 @@ elif [ "$variantFilterationOp" = "BA" ]; then
 						echo "$BAMFILE_NAME: SnpSIFT(VEP)_H already done. Skipping SNPSIFT..."
 					elif [ "$germSomaticOP" = "GERMLINE" ] || [ "$germSomaticOP" = "BOTH" ]; then
 						echo "Annotating SOMATIC variant (EXON): $filename"
-						java -Xmx8g -jar "$snpEff_path" -q -canon -csvStats "${OUTPUT_DIR}${BAMFILE_NAME}_vep_annH.csv" -stats "${OUTPUT_DIR}${BAMFILE_NAME}_vep_annH.html" "$snpEff_db" "$vcfFile" > "${OUTPUT_DIR}${BAMFILE_NAME}_vep_annH.sift.vcf"
+						#CorrectionDone
+						#java -Xmx8g -jar "$snpEff_path" -q -canon -csvStats "${OUTPUT_DIR}${BAMFILE_NAME}_vep_annH.csv" -stats "${OUTPUT_DIR}${BAMFILE_NAME}_vep_annH.html" "$snpEff_db" "$vcfFile" > "${OUTPUT_DIR}${BAMFILE_NAME}_vep_annH.sift.vcf"
+						ACTIVE_FILTER=$(get_active_filter "$filterOptionsA" "VEP")
+						echo "java -Xmx8g -jar "$snpSift" filter "'$ACTIVE_FILTER'" "$vcfFile" > "${OUTPUT_DIR}${BAMFILE_NAME}_vep_annH.sift.vcf""
+						java -Xmx8g -jar "$snpSift" filter "'$ACTIVE_FILTER'" "$vcfFile" > "${OUTPUT_DIR}${BAMFILE_NAME}_vep_annH.sift.vcf"
+						
 						if [ $? -ne 0 ]; then
 							echo "Error: SnpSIFT failed for $BAMFILE_NAME"
 							exit 1
@@ -2174,7 +2361,12 @@ elif [ "$variantFilterationOp" = "BA" ]; then
 						echo "$BAMFILE_NAME: SnpSIFT(snpEff)_M already done. Skipping SNPSIFT..."
 					elif [ "$germSomaticOP" = "SOMATIC" ] || [ "$germSomaticOP" = "BOTH" ]; then
 						echo "Annotating SOMATIC variant (EXON): $filename"
-						java -Xmx8g -jar "$snpEff_path" -q -canon -csvStats "${OUTPUT_DIR}${BAMFILE_NAME}.annM.csv" -stats "${OUTPUT_DIR}${BAMFILE_NAME}.annM.html" "$snpEff_db" "$vcfFile" > "${OUTPUT_DIR}${BAMFILE_NAME}.annM.sift.vcf"
+						#CorrectionDone
+						#java -Xmx8g -jar "$snpEff_path" -q -canon -csvStats "${OUTPUT_DIR}${BAMFILE_NAME}.annM.csv" -stats "${OUTPUT_DIR}${BAMFILE_NAME}.annM.html" "$snpEff_db" "$vcfFile" > "${OUTPUT_DIR}${BAMFILE_NAME}.annM.sift.vcf"
+						ACTIVE_FILTER=$(get_active_filter "$filterOptionsA" "SNPEFF")
+						echo "java -Xmx8g -jar "$snpSift" filter "'$ACTIVE_FILTER'" "$vcfFile" > "${OUTPUT_DIR}${BAMFILE_NAME}.annM.sift.vcf""
+						java -Xmx8g -jar "$snpSift" filter "'$ACTIVE_FILTER'" "$vcfFile" > "${OUTPUT_DIR}${BAMFILE_NAME}.annM.sift.vcf"   
+						
 						if [ $? -ne 0 ]; then
 							echo "Error: SnpSIFT failed for $BAMFILE_NAME"
 							exit 1
@@ -2191,7 +2383,12 @@ elif [ "$variantFilterationOp" = "BA" ]; then
 						echo "$BAMFILE_NAME: SnpSIFT(snpEff)_H already done. Skipping SNPSIFT..."
 					elif [ "$germSomaticOP" = "GERMLINE" ] || [ "$germSomaticOP" = "BOTH" ]; then
 						echo "Annotating SOMATIC variant (EXON): $filename"
-						java -Xmx8g -jar "$snpEff_path" -q -canon -csvStats "${OUTPUT_DIR}${BAMFILE_NAME}.annH.csv" -stats "${OUTPUT_DIR}${BAMFILE_NAME}.annH.html" "$snpEff_db" "$vcfFile" > "${OUTPUT_DIR}${BAMFILE_NAME}.annH.sift.vcf"
+						#CorrectionDone
+						#java -Xmx8g -jar "$snpEff_path" -q -canon -csvStats "${OUTPUT_DIR}${BAMFILE_NAME}.annH.csv" -stats "${OUTPUT_DIR}${BAMFILE_NAME}.annH.html" "$snpEff_db" "$vcfFile" > "${OUTPUT_DIR}${BAMFILE_NAME}.annH.sift.vcf"
+						ACTIVE_FILTER=$(get_active_filter "$filterOptionsA" "SNPEFF")
+						echo "java -Xmx8g -jar "$snpSift" filter "'$ACTIVE_FILTER'" "$vcfFile" > "${OUTPUT_DIR}${BAMFILE_NAME}.annH.sift.vcf""
+						java -Xmx8g -jar "$snpSift" filter "'$ACTIVE_FILTER'" "$vcfFile" > "${OUTPUT_DIR}${BAMFILE_NAME}.annH.sift.vcf"
+						
 						if [ $? -ne 0 ]; then
 							echo "Error: SnpSIFT failed for $BAMFILE_NAME"
 							exit 1
@@ -2219,9 +2416,23 @@ fi
 #variantFilterationOp-END
 
 #Create VCF 
-echo "Generating combined annotated vcf files"
-./extract_all_vcfs.sh "$OUTPUT_DIR" "*.annH.sift.vcf"
-./extract_all_vcfs.sh "$OUTPUT_DIR" "*_vep_annH.sift.vcf"
+#SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# Create VCF 
+#echo "Generating combined annotated vcf files"
+#echo "$SCRIPT_DIR/extract_all_vcfs.sh \"$OUTPUT_DIR\" \"*.annH.sift.vcf\""
+#echo "$SCRIPT_DIR/extract_all_vcfs.sh \"$OUTPUT_DIR\" \"*_vep_annH.sift.vcf\""
+
+#"$SCRIPT_DIR/extract_all_vcfs.sh" "$OUTPUT_DIR" "*.annH.sift.vcf"
+#"$SCRIPT_DIR/extract_all_vcfs.sh" "$OUTPUT_DIR" "*_vep_annH.sift.vcf"
+
+#"$SCRIPT_DIR/extract_all_vcfs.sh" "$OUTPUT_DIR" "*.annM.sift.vcf"
+#"$SCRIPT_DIR/extract_all_vcfs.sh" "$OUTPUT_DIR" "*_vep_annM.sift.vcf"
+
+#echo "Generating combined annotated vcf files"
+#echo "./extract_all_vcfs.sh "$OUTPUT_DIR" "*.annH.sift.vcf""
+#echo "./extract_all_vcfs.sh "$OUTPUT_DIR" "*_vep_annH.sift.vcf""
+#./extract_all_vcfs.sh "$OUTPUT_DIR" "*.annH.sift.vcf"
+#./extract_all_vcfs.sh "$OUTPUT_DIR" "*_vep_annH.sift.vcf"
 
 
 

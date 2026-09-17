@@ -15,7 +15,8 @@ mkdir -p "$OUTPUT_DIR"
 #Joining with _ 
 #MERGED_SUFFIX=$(echo "$PATTERN" | grep -oP '(?<=\.)[^.]+' | paste -sd "_")
 # 1. Remove leading * or *_ if present
-CLEAN_PATTERN="${PATTERN#*([*_])}" 
+#CLEAN_PATTERN="${PATTERN#*([*_])}" 
+CLEAN_PATTERN=$(echo "$PATTERN" | sed -E 's/^[*_.]+//')
 # 2. Strip the trailing .vcf extension
 CLEAN_PATTERN="${CLEAN_PATTERN%.vcf}"
 # 3. Replace remaining dots with underscores

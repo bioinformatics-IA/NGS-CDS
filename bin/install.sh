@@ -250,6 +250,9 @@ install_package libeigen3-dev   # `tatami` uses Eigen
 install_package libboost-dev    # Often required for advanced C++ packages
 install_package libv8-dev      # Required for V8 Package 
 #install_package libfswatch-dev # For watcher
+# Document & Report Generation Dependencies (Required by R Markdown)
+install_package pandoc /usr/bin/pandoc
+
 echo "============================================"
 echo "DEACTIVATING CONDA..."
 echo "============================================"
@@ -590,7 +593,7 @@ source ~/.bashrc
 
 install_software "HTS" "$HTSLIB_PATH" "cd \"$HTSLIB_PATH\" && make && echo \"$PASS\" | sudo -S make install"
 install_software "ensembl-vep" "$VEP_PATH" "echo $PASS | sudo -S cpanm -n List::MoreUtils DBD::mysql Test::Warnings XML::LibXML XML::LibXML::Reader Bio::SeqFeature::Lite && cd $VEP_PATH && echo $PASS | sudo -S perl INSTALL.pl --AUTO a --NO_HTSLIB --NO_TEST --NO_UPDATE --CACHEDIR $VEP_PATH/cache --SPECIES homo_sapiens --CACHE_VERSION 114 && export HTSLIB_DIR=$HTSLIB_PATH && echo $PASS | sudo -S cpanm -n Bio::DB::HTS" #--local-lib=~/perl5 
-CACHE_VERSION=114
+CACHE_VERSION=115
 SPECIES=homo_sapiens
 if [ ! -d "$VEP_PATH/cache/homo_sapiens" ]; then
     echo "Downloading VEP cache..."
@@ -602,7 +605,7 @@ if [ ! -d "$VEP_PATH/cache/homo_sapiens" ]; then
     tar -xzf \${SPECIES}_vep_\${CACHE_VERSION}_CACHE.tar.gz -C $VEP_PATH/cache --strip-components=1 &&
 
      # tell VEP to register the cache (without re-downloading)
-    perl INSTALL.pl --AUTO c --SPECIES homo_sapiens --CACHE_VERSION 114 --CACHEDIR $VEP_PATH/cache
+    perl INSTALL.pl --AUTO c --SPECIES homo_sapiens --CACHE_VERSION 115 --CACHEDIR $VEP_PATH/cache
 
 fi
 #install_software "vcf2maf" "$vcf2maf_PATH" "cd \"$vcf2maf_PATH\" && echo \"$PASS\" | sudo -S cpanm -n DBI DBD::SQLite JSON Try::Tiny File::Which List::Util List::MoreUtils && export PATH=$vcf2maf_PATH:\$PATH"
