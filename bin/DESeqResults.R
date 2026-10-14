@@ -4,7 +4,7 @@
 
 myargs = commandArgs(trailingOnly=TRUE)
 # ######################################
-# myargs[1]="/home/iffy/PhD_Data/CASESTUDY/1-Hepatocellular_carcinoma_100/RNASeq_PRJNA867011/TestingDESeq2/"
+# myargs[1]="/home/iffy/PhD_Data/CASESTUDY/1-Hepatocellular_carcinoma_100/RNASeq_PRJNA867011/Output_RNASeq1/"
 # myargs[2]="/home/iffy/NetBeansProjects/NGSGradle/app/R_Libraries/"
 # myargs[3]="0.1"
 # myargs[4]="0.05"
@@ -153,7 +153,7 @@ sink.reset <- function(){
 
 setwd(file.path(myargs[1], "DeSeqResults"))
 .libPaths()
-cat("\n========== DESEQ RESULT ANALYSIS STARTED ==========\n")
+cat("\n=================== DESEQ2 RESULT ANALYSIS STARTED ===================\n")
 
 tryCatch({
   res <- resultsNames(dds)
@@ -168,22 +168,23 @@ tryCatch({
 if(selectedFactor=="LIST")
 {
   
-  print("ANALYSING RESULTS BY LIST.....")
+  cat("\nANALYSIS MODE: Processing results by contrast list...\n")
   
   #Removing any square brackets from value1
   value1 = gsub("\\[|\\]", "", value1)
   #Split value1 on comma and save as a list
   value1=trimws(strsplit(value1, ",")[[1]])
   
-  #cat("\nSelected values by the user: ",value1)
   cat("\nSelected values by the user: ", paste(value1, collapse=", "), "\n")
   
   # Initialize a data frame to store all results combined
   combined_res_df <- data.frame()
-  for(x in value1) {
+  valid_results_names <- resultsNames(dds)
+  
+   for(x in value1) {
     v <- make.names(x)
     
-    if(v %in% resultsNames(dds)) {
+    if(v %in% valid_results_names) {
   
           res <- results(dds, alpha=resAlpha, name=v)
       
@@ -195,39 +196,77 @@ if(selectedFactor=="LIST")
       
       combined_res_df <- rbind(combined_res_df, temp_df)
       
-      cat("Processed contrast: ", v, "\n")
+      cat("Processed contrast (Direct Match): ", v, "\n")
       
     } else {
-      warning("Contrast ", v, " not found in DESeq2 object. Skipping.")
+      # CASE 2: Attempt auto-swapping placement around '_vs_'
+      # E.g., convert "ZNF384_STATUS_mutated_vs_wildtype" -> "ZNF384_STATUS_wildtype_vs_mutated"
+      
+      swapped_v <- NULL
+      # Extract factor name, level1, level2 using regex splitting on '_vs_'
+      parts <- unlist(strsplit(v, "_vs_"))
+      if (length(parts) == 2) {
+        # Split parts[1] on the last underscore to isolate factor name and level1
+        factor_parts <- unlist(strsplit(parts[1], "_(?=[^_]+$)", perl=TRUE))
+        
+        if (length(factor_parts) == 2) {
+          factor_name <- factor_parts[1]
+          level1      <- factor_parts[2]
+          level2      <- parts[2]
+          
+          # Construct flipped string
+          swapped_v <- paste0(factor_name, "_", level2, "_vs_", level1)
+        }
+      }
+      
+      # Check if the swapped version exists in DESeq2 resultsNames
+      if (!is.null(swapped_v) && swapped_v %in% valid_results_names) {
+        cat("Note: Swapped placement detected for '", v, "'. Extracting contrast directly via DESeq2 contrast vector...\n", sep="")
+        
+        # Extract contrast with requested numerator/denominator (flips log2FC signs automatically)
+        res <- results(dds, alpha=resAlpha, contrast=c(factor_name, level1, level2))
+        res <- res[order(res$padj), ]
+        
+        temp_df <- as.data.frame(res)
+        temp_df$contrast <- v
+        combined_res_df <- rbind(combined_res_df, temp_df)
+        
+        cat("Processed contrast (Auto-Swapped Match): ", v, " using baseline from ", swapped_v, "\n", sep="")
+        
+      } else {
+        # CASE 3: Neither exact nor swapped contrast exists -> Stop execution with clear user feedback
+        stop(
+          "\n\n[ERROR]: The selected contrast '", x, "' (processed as '", v, "') was not found in the DESeq2 object.\n",
+          "Available contrasts in DESeq2 are:\n  - ", paste(valid_results_names, collapse="\n  - "), "\n\n",
+          "Please check for typos or select the contrast directly from the dropdown list option instead of text entry.\n",
+          call. = FALSE
+        )
+      }
+      
     }
   }
   # Use the combined data frame as 'res_df'
   res_df <- combined_res_df
   
 }else{
-  print("ANALYSING RESULTS BY CONTRAST.....")
+  cat("\nANALYSIS MODE: Processing results by explicit contrast factor...\n")
   res <- results(dds,alpha =resAlpha,contrast = c(selectedFactor,value1,value2)) 
+  # Print the explicit log2 fold change formula from DESeq2 metadata
+  cat("DESeq2 Comparison Formula:", mcols(res)$description[2], "\n")
+  
   res <- res[order(res$padj), ]
   res_df <- as.data.frame(res)
   
 }
 # STEP 3: Print summary
-cat("\nDESeq Results ordred by padj\n")
+cat("\nTop DESeq2 Results ordred by padj\n")
 print(head(res_df))
-cat("\nDESeq Result Summary:\n")
+cat("\nDESeq2 Result Summary:\n")
 if(selectedFactor == "LIST") {
   print("Summary is per contrast available in 'contrast' column of res_df")
 } else {
   print(summary(res))
 }
-
-#print("DESeq Results ordred by padj")
-#res <-res[order(res$padj),]
-#print(res)
-#print("DESeq Result Summary:")
-#print(summary(res)) #Summary of results
-
-#results of analysis c(selectedFactor,value1,value2)
 
 #===========================================================================
 
@@ -243,9 +282,15 @@ min_log2fold <- min(abs(res_df$log2FoldChange), na.rm = TRUE)
 
 max_padj <- max(res_df$padj, na.rm = TRUE)
 max_log2fold <- max(abs(res_df$log2FoldChange), na.rm = TRUE)
-print("Suggested thresholds based on data:")
-print(sprintf("padj limit = %f to %f", min_padj, max_padj))
-print(sprintf("log2FoldChange limit = %f to %f", min_log2fold,max_log2fold))
+
+cat("\n-----------------------------------------------------\n")
+cat(sprintf("Observed Range: padj [%.3e to %.3f] | |log2FC| [%.3f to %.3f]\n", min_padj, max_padj, min_log2fold, max_log2fold))
+cat(sprintf("Filtering Criteria: padj < %.3g and |log2FoldChange| > %.2f\n", padj, log2fold))
+cat("-----------------------------------------------------\n")
+
+#print("Suggested thresholds based on data:")
+#print(sprintf("padj limit = %f to %f", min_padj, max_padj))
+#print(sprintf("log2FoldChange limit = %f to %f", min_log2fold,max_log2fold))
 
 # Set a boolean column for significance based on padj and log2FoldChange
 res_df$significant <- ifelse(res_df$padj < padj & abs(res_df$log2FoldChange) > log2fold, "Significant", NA) #Adding Significant col to res_df
@@ -257,11 +302,11 @@ if (sum(res_df$significant == "Significant", na.rm = TRUE) == 0) {
   
 } else {
   print(sprintf("Significant genes found (%d):",nrow(res_df[!is.na(res_df$significant), ])))
-  print(res_df[!is.na(res_df$significant), ])
+  print(head(res_df[!is.na(res_df$significant), ],10))
 }
 
 
-print(head(res_df))
+#print(head(res_df))
 
 ######################  
 ##DE GENES and ANALYSIS
@@ -271,10 +316,11 @@ res_df$genes <- rownames(res_df)
 
 deGenes <- res_df[which(res_df$significant == "Significant"),] #Significant genes complete data
 deGenes<-deGenes[order(deGenes$padj),] #Sorting in decreasing order
-cat("Total number of DE Genes (",nrow(deGenes),") :")
-print(deGenes)
+#cat("Total number of DE Genes (",nrow(deGenes),") :")
+#print(deGenes)
 setwd(file.path(myargs[1]))
 saveRDS(deGenes, file = "degenes.RDS") #Save single object
+
 # 1. Strip decimal version numbers from Ensembl IDs if they exist in rownames
 gsea_genes <- gsub("\\..*$", "", rownames(res_df)) 
 # 2. Extract log2FoldChange values and assign clean gene names
@@ -290,19 +336,21 @@ cat(sprintf("[GSEA PREP] Successfully saved complete ranked profile of %d genes 
 print("Saving results to file DESeq2_Results.txt")
 setwd(file.path(myargs[1], "DeSeqResults"))
 #RESULTS TO FILE
+
 sink(file ="DESeq2_Results.txt",append = TRUE,type = "output")
-print("*****************************************")
-print("DESeq Results ordred by padj")
-print(res)
+cat("*****************************************************\n")
+cat("DESeq2 Results Summary Report\n")
+cat("*****************************************************\n")
+print("Top 10 DESeq2 Results ordred by padj")
+print(head(res,10))
 print("DESeq Result Summary:")
 print(summary(res)) #Summary of results
 print(sprintf("Adding an extra column 'Significant' in result data frame where padj<%f and log2FoldChange>%f",padj,log2fold))
-print(res_df)
+print(head(res_df,10))
 print(sprintf("Total number of DE Genes Identified: %d",nrow(deGenes)))
-print("DE Genes:")
-print(deGenes)
-
-print("*****************************************")
+print("Top 10 DE Genes:")
+print(head(deGenes,10))
+cat("\n*****************************************************\n")
 sink.reset()
 
 # Dynamically annotate Gene Symbols, Ensembl IDs, and Entrez IDs
@@ -311,10 +359,6 @@ res_df <- annotate_genes_dynamic(res_df, db = org.Hs.eg.db)
 # Save results to clean CSV
 write.csv(res_df, "DESeq_results.csv", row.names = FALSE)
 cat("Results successfully saved with dynamic gene annotations to DESeq_results.csv\n")
-
-#write.table(res_df,"DESeq_results.csv", row.names = FALSE,col.names = TRUE,sep = "\t")
-
-
 
 ########################
 # Hierarchical clustering Plot: dist() or hclust()

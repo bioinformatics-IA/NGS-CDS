@@ -213,51 +213,59 @@ public class VariantPipelineInternalFrame extends javax.swing.JInternalFrame {
         // Create a list of text values for the combo box
         items = new Vector<>();
         items.add(""); // First value as empty string
-        items.add("AS_BaseQualityRankSumTest (AS_BaseQRankSum)");
-        items.add("AS_FisherStrand (AS_FS)");
-        items.add("AS_InbreedingCoeff (AS_InbreedingCoeff)");
-        items.add("AS_MappingQualityRankSumTest (AS_MQRankSum)");
-        items.add("AS_QualByDepth (AS_QD)");
-        items.add("AS_RMSMappingQuality (AS_MQ)");
-        items.add("AS_ReadPosRankSumTest (AS_ReadPosRankSum)");
-        items.add("AS_StrandOddsRatio (AS_SOR)");
-        items.add("AlleleFraction");
-        items.add("AllelePseudoDepth (DP)");
-        items.add("AssemblyComplexity");
-        items.add("BaseQuality (MBQ)");
-        items.add("BaseQualityRankSumTest (BaseQRankSum)");
-        items.add("ChromosomeCounts (AC,AF,AN)");
-        items.add("ClippingRankSumTest (ClippingRankSum)");
-        items.add("CountNs");
-        items.add("Coverage (DP)");
-        items.add("DepthPerAlleleBySample (AD)");
-        items.add("DepthPerSampleHC (DP)");
-        items.add("ExcessHet (ExcessHet)");
-        items.add("FisherStrand (FS)");
-        items.add("FragmentDepthPerAlleleBySample (AD)");
-        items.add("FragmentLength (MFRL)");
-        items.add("GenotypeSummaries (NCC, GQ_MEAN, GQ_STDDEV)");
-        items.add("InbreedingCoeff (InbreedingCoeff)");
-        items.add("LikelihoodRankSumTest (LikelihoodRankSum)");
-        items.add("MappingQuality (MMQ)");
-        items.add("MappingQualityRankSumTest (MQRankSum)");
-        items.add("MappingQualityZero (MQ0)");
-        items.add("OrientationBiasReadCounts (F1R2, F2R1)");
-        items.add("OriginalAlignment");
-        items.add("PossibleDeNovo(hiConfDeNovo, loConfDeNovo)");
-        items.add("QualByDepth (QD)");
-        items.add("RMSMappingQuality (MQ)");
-        items.add("RawGtCount");
-        items.add("ReadPosRankSumTest (ReadPosRankSum)");
-        items.add("ReadPosition (MPOS)");
-        items.add("ReferenceBases (REF_BASES)");
-        items.add("SampleList (Samples)");
-        items.add("StrandBiasBySample (SB)");
-        items.add("StrandOddsRatio (SOR)");
-        items.add("TandemRepeat (STR, RU, RPA)");
-        items.add("TransmittedSingleton (transmittedSingleton, nonTransmittedSingleton)");
-        items.add("UniqueAltReadCount (AS_UNIQ_ALT_READ_COUNT)");
+        // --- ANNOTATION GROUPS (-G) ---
+        items.add("-G StandardAnnotation");
+        items.add("-G AS_StandardAnnotation");
+        items.add("-G StandardHCAnnotation");
+        items.add("-G AS_StandardHCAnnotation");
 
+// --- ALLELE-SPECIFIC ANNOTATIONS (-A) ---
+        items.add("-A AS_BaseQualityRankSumTest");
+        items.add("-A AS_FisherStrand");
+        items.add("-A AS_InbreedingCoeff");
+        items.add("-A AS_MappingQualityRankSumTest");
+        items.add("-A AS_QualByDepth");
+        items.add("-A AS_RMSMappingQuality");
+        items.add("-A AS_ReadPosRankSumTest");
+        items.add("-A AS_StrandOddsRatio");
+        items.add("-A UniqueAltReadCount");
+
+// --- STANDARD INDIVIDUAL ANNOTATIONS (-A) ---
+        items.add("-A AlleleFraction");
+        items.add("-A AllelePseudoDepth");
+        items.add("-A AssemblyComplexity");
+        items.add("-A BaseQuality");
+        items.add("-A BaseQualityRankSumTest");
+        items.add("-A ChromosomeCounts");
+        items.add("-A ClippingRankSumTest");
+        items.add("-A CountNs");
+        items.add("-A Coverage");
+        items.add("-A DepthPerAlleleBySample");
+        items.add("-A DepthPerSampleHC");
+        items.add("-A ExcessHet");
+        items.add("-A FisherStrand");
+        items.add("-A FragmentDepthPerAlleleBySample");
+        items.add("-A FragmentLength");
+        items.add("-A GenotypeSummaries");
+        items.add("-A InbreedingCoeff");
+        items.add("-A LikelihoodRankSumTest");
+        items.add("-A MappingQuality");
+        items.add("-A MappingQualityRankSumTest");
+        items.add("-A MappingQualityZero");
+        items.add("-A OrientationBiasReadCounts");
+        items.add("-A OriginalAlignment");
+        items.add("-A PossibleDeNovo");
+        items.add("-A QualByDepth");
+        items.add("-A RMSMappingQuality");
+        items.add("-A RawGtCount");
+        items.add("-A ReadPosRankSumTest");
+        items.add("-A ReadPosition");
+        items.add("-A ReferenceBases");
+        items.add("-A SampleList");
+        items.add("-A StrandBiasBySample");
+        items.add("-A StrandOddsRatio");
+        items.add("-A TandemRepeat");
+        items.add("-A TransmittedSingleton");
         initComponents();
 
 //SETTING FOR FASTQC TABLE MODEL
@@ -377,7 +385,7 @@ public class VariantPipelineInternalFrame extends javax.swing.JInternalFrame {
         trimPanel.setVisible(false);
 
         analysisPanel.setVisible(false);
-        genomicDBPanel.setVisible(false);
+        intervalPanel.setVisible(true);
         bwaPanel.setVisible(false);
         normalPanel.setVisible(false);
         otherPanel.setVisible(false);
@@ -393,9 +401,13 @@ public class VariantPipelineInternalFrame extends javax.swing.JInternalFrame {
         add9.setEnabled(false);
         del9.setEnabled(false);
 
+        somaticWarningLabel.setText("");
+somaticWarning2.setText("");
+
         //Default strings 
         defaultAnalysis();
         defaultSetting();
+        
 
     }//Constructor
 
@@ -662,6 +674,12 @@ public class VariantPipelineInternalFrame extends javax.swing.JInternalFrame {
                                 || line.contains("./bwa: not found") || line.contains("[E::bwa_")
                                 || line.contains("[E::")) {
                             pipelineError = true;
+                            
+                            String errorDetails;
+                            while ((errorDetails = reader.readLine()) != null) {
+                                App.LOGGER.info("\r\n" + errorDetails);
+                                publish("\r\n" + errorDetails);
+                            }
                             break;
                         }
 
@@ -780,15 +798,15 @@ public class VariantPipelineInternalFrame extends javax.swing.JInternalFrame {
 
                     if (singleModeH.isSelected()) {
                         cmdList.add("SINGLEMODE");//13 
-                        cmdList.add(""); //14
                     } else if (jointModeH.isSelected()) {
                         cmdList.add("JOINTMODE");//13 
-                        if (uploadIntervalfileR.isSelected()) {
-                            cmdList.add(" -L " + intervalT1.getText());//14
-                        } else {
-                            cmdList.add(intervalText1.getText());//14
-                        }
 
+                    }
+
+                    if (uploadIntervalfileR.isSelected()) {
+                        cmdList.add("-L " + intervalT1.getText().trim());//14
+                    } else {
+                        cmdList.add(intervalText1.getText().trim());//14
                     }
 
                     cmdList.add(thread.getText());  //15
@@ -837,7 +855,10 @@ public class VariantPipelineInternalFrame extends javax.swing.JInternalFrame {
                     cmdList.add(germSomaticOP);// 24 Option 
 
                     cmdList.add(somaticOP);//25 somatic options
-
+                    cmdList.add(gnomadVcf.getText());//26 gnomad
+                    cmdList.add(dbsnpVCF.getText());//27 dbsnp
+                    cmdList.add(clinvarVCF.getText());//28 clinvar
+                    //Changed from 29 onwards
                     if (germline.isSelected() && somatic.isSelected()) {
                         //Germline Setting
                         cmdList.add(ercCombo.getSelectedItem().toString()); //26 -ERC
@@ -1083,42 +1104,36 @@ public class VariantPipelineInternalFrame extends javax.swing.JInternalFrame {
             protected void done() {
                 App.sP.setBorder(javax.swing.BorderFactory.createTitledBorder(null, "", javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION, javax.swing.border.TitledBorder.DEFAULT_POSITION, new java.awt.Font("Liberation Sans", 1, 15), new java.awt.Color(255, 255, 255)));
                 App.bar.setIndeterminate(false);
-                 if (!pipelineError) {
-                       //*.annH.sift.vcf,*_vep_annH.sift.vcf
-                    if (snpEffvepRadio.isSelected()) {
-                        
-                        if(germline.isSelected()){
-                            pipelineStage="germline_snpeff";
-                       
-                            VCFHandler(System.getProperty("user.dir").concat("/bin/extract_all_vcfs.sh"), output_Dir.getText(), "*.annH.sift.vcf");
-                        
-                     
-                        
-                        }
-//                        if (somatic.isSelected()){
-//                        VCFHandler(System.getProperty("user.dir").concat("/bin/extract_all_vcfs.sh"), output_Dir.getText(), "*.annM.sift.vcf");
-//                        VCFHandler(System.getProperty("user.dir").concat("/bin/extract_all_vcfs.sh"), output_Dir.getText(), "*_vep_annM.sift.vcf");
-//                            
+                if (!pipelineError) {
+//                    //*.annH.sift.vcf,*_vep_annH.sift.vcf
+//                    if (snpEffvepRadio.isSelected()) {
+//
+//                        if (germline.isSelected()) {
+//                            pipelineStage = "germline_snpeff";
+//
+//                            VCFHandler(System.getProperty("user.dir").concat("/bin/extract_all_vcfs.sh"), output_Dir.getText(), "*.annH.sift.vcf");
+//
 //                        }
-                        
-                        
-                        
-                    } else if (snpEffRadio.isSelected()) {
-                        if(germline.isSelected())
-                            VCFHandler(System.getProperty("user.dir").concat("/bin/extract_all_vcfs.sh"), output_Dir.getText(), "*.annH.sift.vcf");
-                 
-                        if(somatic.isSelected())
-                            VCFHandler(System.getProperty("user.dir").concat("/bin/extract_all_vcfs.sh"), output_Dir.getText(), "*.annM.sift.vcf");
-                 
-                    
-                    } else {
-                        if (germline.isSelected())
-                            VCFHandler(System.getProperty("user.dir").concat("/bin/extract_all_vcfs.sh"), output_Dir.getText(), "*_vep_annH.sift.vcf");
-
-                        if (somatic.isSelected())
-                            VCFHandler(System.getProperty("user.dir").concat("/bin/extract_all_vcfs.sh"), output_Dir.getText(), "*_vep_annM.sift.vcf");
-
-                    }
+//
+//                    } else if (snpEffRadio.isSelected()) {
+//                        if (germline.isSelected()) {
+//                            VCFHandler(System.getProperty("user.dir").concat("/bin/extract_all_vcfs.sh"), output_Dir.getText(), "*.annH.sift.vcf");
+//                        }
+//
+//                        if (somatic.isSelected()) {
+//                            VCFHandler(System.getProperty("user.dir").concat("/bin/extract_all_vcfs.sh"), output_Dir.getText(), "*.annM.sift.vcf");
+//                        }
+//
+//                    } else {
+//                        if (germline.isSelected()) {
+//                            VCFHandler(System.getProperty("user.dir").concat("/bin/extract_all_vcfs.sh"), output_Dir.getText(), "*_vep_annH.sift.vcf");
+//                        }
+//
+//                        if (somatic.isSelected()) {
+//                            VCFHandler(System.getProperty("user.dir").concat("/bin/extract_all_vcfs.sh"), output_Dir.getText(), "*_vep_annM.sift.vcf");
+//                        }
+//
+//                    }
 
 //                    //TREE SETTINGS
 //                    root = new DefaultMutableTreeNode(new File(output_Dir.getText()).getName());
@@ -1134,14 +1149,14 @@ public class VariantPipelineInternalFrame extends javax.swing.JInternalFrame {
 //
 //                    visualPanel.setVisible(true);
                 }//if
-                else{
-                            publish("\r\n" + "ERROR: Pipeline failed in previous step. The following processes were NOT completed:\n"
-                       + " - TSV Extraction from annotated VCF files\n"
-                       + " - Combined Wide/Long TSV matrix generation\n\n"
-                       + "Please resolve the errors above and re-run.");
+                else {
+                    publish("\r\n" + "ERROR: Pipeline failed in previous step. The following processes were NOT completed:\n"
+                            + " - TSV Extraction from annotated VCF files\n"
+                            + " - Combined Wide/Long TSV matrix generation\n\n"
+                            + "Please resolve the errors above and re-run.");
 
                 }
-                
+
             }//done
 
         };
@@ -1209,47 +1224,47 @@ public class VariantPipelineInternalFrame extends javax.swing.JInternalFrame {
 
                 App.bar.setIndeterminate(false);
                 if (!pipelineError) {
-    
+
                     if (snpEffvepRadio.isSelected()) {
 
-                        if(germline.isSelected()){
-                      
-                        if(pipelineStage=="germline_snpeff") {
-                            VCF_PivotFiles(System.getProperty("user.dir").concat("/bin/VCF_PivotFiles.R"), output_Dir.getText(), System.getProperty("user.dir").concat("/R_Libraries"), output_Dir.getText().concat("/mergedLong_annH_sift_all.tsv"),System.getProperty("user.dir").concat("/bin/genomic_report.Rmd"));
+                        if (germline.isSelected()) {
+
+                            if (pipelineStage == "germline_snpeff") {
+                                VCF_PivotFiles(System.getProperty("user.dir").concat("/bin/VCF_PivotFiles.R"), output_Dir.getText(), System.getProperty("user.dir").concat("/R_Libraries"), output_Dir.getText().concat("/mergedLong_annH_sift_all.tsv"), System.getProperty("user.dir").concat("/bin/genomic_report.Rmd"));
+                            } else if (pipelineStage == "germline_vep") {
+                                // pipelineStage="germline_snpeff";
+                                VCF_PivotFiles(System.getProperty("user.dir").concat("/bin/VCF_PivotFiles.R"), output_Dir.getText(), System.getProperty("user.dir").concat("/R_Libraries"), output_Dir.getText().concat("/mergedLong_vep_annH_sift_all.tsv"), System.getProperty("user.dir").concat("/bin/genomic_report.Rmd"));
+
+                            }
+
                         }
-                        else if(pipelineStage=="germline_vep") {
-                           // pipelineStage="germline_snpeff";
-                             VCF_PivotFiles(System.getProperty("user.dir").concat("/bin/VCF_PivotFiles.R"), output_Dir.getText(), System.getProperty("user.dir").concat("/R_Libraries"), output_Dir.getText().concat("/mergedLong_vep_annH_sift_all.tsv"),System.getProperty("user.dir").concat("/bin/genomic_report.Rmd"));   
-                            
-                        }
-                                                
-                        }
-                        
-                        if(somatic.isSelected()){
-                        if(pipelineStage=="somatic_snpeff") {
-                        
-                            VCF_PivotFiles(System.getProperty("user.dir").concat("/bin/VCF_PivotFiles.R"), output_Dir.getText(), System.getProperty("user.dir").concat("/R_Libraries"), output_Dir.getText().concat("/mergedLong_annM_sift_all.tsv"),System.getProperty("user.dir").concat("/bin/genomic_report.Rmd"));
-                        }
-                        else if(pipelineStage=="somatic_vep") {
-                        
-                            VCF_PivotFiles(System.getProperty("user.dir").concat("/bin/VCF_PivotFiles.R"), output_Dir.getText(), System.getProperty("user.dir").concat("/R_Libraries"), output_Dir.getText().concat("/mergedLong_vep_annM_sift_all.tsv"),System.getProperty("user.dir").concat("/bin/genomic_report.Rmd"));    
-                        }
-                        
+
+                        if (somatic.isSelected()) {
+                            if (pipelineStage == "somatic_snpeff") {
+
+                                VCF_PivotFiles(System.getProperty("user.dir").concat("/bin/VCF_PivotFiles.R"), output_Dir.getText(), System.getProperty("user.dir").concat("/R_Libraries"), output_Dir.getText().concat("/mergedLong_annM_sift_all.tsv"), System.getProperty("user.dir").concat("/bin/genomic_report.Rmd"));
+                            } else if (pipelineStage == "somatic_vep") {
+
+                                VCF_PivotFiles(System.getProperty("user.dir").concat("/bin/VCF_PivotFiles.R"), output_Dir.getText(), System.getProperty("user.dir").concat("/R_Libraries"), output_Dir.getText().concat("/mergedLong_vep_annM_sift_all.tsv"), System.getProperty("user.dir").concat("/bin/genomic_report.Rmd"));
+                            }
+
                         }
 
                     } else if (snpEffRadio.isSelected()) {
-                      if(germline.isSelected())      
-                        VCF_PivotFiles(System.getProperty("user.dir").concat("/bin/VCF_PivotFiles.R"), output_Dir.getText(), System.getProperty("user.dir").concat("/R_Libraries"), output_Dir.getText().concat("/mergedLong_annH_sift_all.tsv"),System.getProperty("user.dir").concat("/bin/genomic_report.Rmd"));
-                       if(somatic.isSelected())      
-                        VCF_PivotFiles(System.getProperty("user.dir").concat("/bin/VCF_PivotFiles.R"), output_Dir.getText(), System.getProperty("user.dir").concat("/R_Libraries"), output_Dir.getText().concat("/mergedLong_annM_sift_all.tsv"),System.getProperty("user.dir").concat("/bin/genomic_report.Rmd"));
-                    } else {
-                        if(germline.isSelected()){
-                        VCF_PivotFiles(System.getProperty("user.dir").concat("/bin/VCF_PivotFiles.R"), output_Dir.getText(), System.getProperty("user.dir").concat("/R_Libraries"), output_Dir.getText().concat("/mergedLong_vep_annH_sift_all.tsv"),System.getProperty("user.dir").concat("/bin/genomic_report.Rmd"));
-    
+                        if (germline.isSelected()) {
+                            VCF_PivotFiles(System.getProperty("user.dir").concat("/bin/VCF_PivotFiles.R"), output_Dir.getText(), System.getProperty("user.dir").concat("/R_Libraries"), output_Dir.getText().concat("/mergedLong_annH_sift_all.tsv"), System.getProperty("user.dir").concat("/bin/genomic_report.Rmd"));
                         }
-                        if(somatic.isSelected()){
-                        VCF_PivotFiles(System.getProperty("user.dir").concat("/bin/VCF_PivotFiles.R"), output_Dir.getText(), System.getProperty("user.dir").concat("/R_Libraries"), output_Dir.getText().concat("/mergedLong_vep_annM_sift_all.tsv"),System.getProperty("user.dir").concat("/bin/genomic_report.Rmd"));
-    
+                        if (somatic.isSelected()) {
+                            VCF_PivotFiles(System.getProperty("user.dir").concat("/bin/VCF_PivotFiles.R"), output_Dir.getText(), System.getProperty("user.dir").concat("/R_Libraries"), output_Dir.getText().concat("/mergedLong_annM_sift_all.tsv"), System.getProperty("user.dir").concat("/bin/genomic_report.Rmd"));
+                        }
+                    } else {
+                        if (germline.isSelected()) {
+                            VCF_PivotFiles(System.getProperty("user.dir").concat("/bin/VCF_PivotFiles.R"), output_Dir.getText(), System.getProperty("user.dir").concat("/R_Libraries"), output_Dir.getText().concat("/mergedLong_vep_annH_sift_all.tsv"), System.getProperty("user.dir").concat("/bin/genomic_report.Rmd"));
+
+                        }
+                        if (somatic.isSelected()) {
+                            VCF_PivotFiles(System.getProperty("user.dir").concat("/bin/VCF_PivotFiles.R"), output_Dir.getText(), System.getProperty("user.dir").concat("/R_Libraries"), output_Dir.getText().concat("/mergedLong_vep_annM_sift_all.tsv"), System.getProperty("user.dir").concat("/bin/genomic_report.Rmd"));
+
                         }
                     }
 
@@ -1262,7 +1277,7 @@ public class VariantPipelineInternalFrame extends javax.swing.JInternalFrame {
 
     }
 
-    public void VCF_PivotFiles(String scriptPath, String directoryPath, String rLib, String filePath,String markDownFile) {
+    public void VCF_PivotFiles(String scriptPath, String directoryPath, String rLib, String filePath, String markDownFile) {
 
         warningLabel.setText(null);
         pipelineError = false;
@@ -1282,7 +1297,7 @@ public class VariantPipelineInternalFrame extends javax.swing.JInternalFrame {
                             scriptPath,
                             directoryPath,
                             rLib,
-                            filePath,markDownFile);
+                            filePath, markDownFile);
                     processBuilder.redirectErrorStream(true);
                     // Start the process
                     process = processBuilder.start();
@@ -1324,30 +1339,26 @@ public class VariantPipelineInternalFrame extends javax.swing.JInternalFrame {
 
                 App.bar.setIndeterminate(false);
                 if (!pipelineError) {
-                
-                if (snpEffvepRadio.isSelected()) {
-                       
-                        if(germline.isSelected()){
-                        if(pipelineStage=="germline_snpeff"){
-                            pipelineStage="germline_vep";
-                            VCFHandler(System.getProperty("user.dir").concat("/bin/extract_all_vcfs.sh"), output_Dir.getText(), "*_vep_annH.sift.vcf");
-                          
+
+                    if (snpEffvepRadio.isSelected()) {
+
+                        if (germline.isSelected()) {
+                            if (pipelineStage == "germline_snpeff") {
+                                pipelineStage = "germline_vep";
+                                VCFHandler(System.getProperty("user.dir").concat("/bin/extract_all_vcfs.sh"), output_Dir.getText(), "*_vep_annH.sift.vcf");
+
+                            }
+
                         }
-                             
-                        }
-                       
-                        if(somatic.isSelected()){
-                        VCF_PivotFiles(System.getProperty("user.dir").concat("/bin/VCF_PivotFiles.R"), output_Dir.getText(), System.getProperty("user.dir").concat("/R_Libraries"), output_Dir.getText().concat("/mergedLong_annM_sift_all.tsv"),System.getProperty("user.dir").concat("/bin/genomic_report.Rmd"));
-                        VCF_PivotFiles(System.getProperty("user.dir").concat("/bin/VCF_PivotFiles.R"), output_Dir.getText(), System.getProperty("user.dir").concat("/R_Libraries"), output_Dir.getText().concat("/mergedLong_vep_annM_sift_all.tsv"),System.getProperty("user.dir").concat("/bin/genomic_report.Rmd"));    
-                            
+
+                        if (somatic.isSelected()) {
+                            VCF_PivotFiles(System.getProperty("user.dir").concat("/bin/VCF_PivotFiles.R"), output_Dir.getText(), System.getProperty("user.dir").concat("/R_Libraries"), output_Dir.getText().concat("/mergedLong_annM_sift_all.tsv"), System.getProperty("user.dir").concat("/bin/genomic_report.Rmd"));
+                            VCF_PivotFiles(System.getProperty("user.dir").concat("/bin/VCF_PivotFiles.R"), output_Dir.getText(), System.getProperty("user.dir").concat("/R_Libraries"), output_Dir.getText().concat("/mergedLong_vep_annM_sift_all.tsv"), System.getProperty("user.dir").concat("/bin/genomic_report.Rmd"));
+
                         }
 
                     }
-                
-                
-                
-                
-                    
+
                 }//endif
             }//done
 
@@ -1849,6 +1860,11 @@ public class VariantPipelineInternalFrame extends javax.swing.JInternalFrame {
                                 || line.contains("MultiQC failed!")) {
                             pipelineError = true;
                             App.LOGGER.error("Pipeline error detected: " + line);
+                            String errorDetails;
+                            while ((errorDetails = br.readLine()) != null) {
+                                App.LOGGER.info("\r\n" + errorDetails);
+                                publish("\r\n" + errorDetails);
+                            }
                             break;
                         }
                     }//endWhile
@@ -2320,6 +2336,11 @@ public class VariantPipelineInternalFrame extends javax.swing.JInternalFrame {
                         //ERROR CHECK
                         if (line.toLowerCase().contains("exception") || line.toLowerCase().contains("error")) {
                             pipelineError = true;
+                            String errorDetails;
+                            while ((errorDetails = br.readLine()) != null) {
+                                App.LOGGER.info("\r\n" + errorDetails);
+                                publish("\r\n" + errorDetails);
+                            }
                             break;
                         }
 
@@ -2671,7 +2692,7 @@ public class VariantPipelineInternalFrame extends javax.swing.JInternalFrame {
         jLabel11 = new javax.swing.JLabel();
         jLabel8 = new javax.swing.JLabel();
         annotationGroupCombo = new javax.swing.JComboBox<>(items);
-        genomicDBPanel = new javax.swing.JPanel();
+        intervalPanel = new javax.swing.JPanel();
         jLabel46 = new javax.swing.JLabel();
         jLabel48 = new javax.swing.JLabel();
         intervalT1 = new javax.swing.JTextField();
@@ -2771,6 +2792,24 @@ public class VariantPipelineInternalFrame extends javax.swing.JInternalFrame {
         add10 = new javax.swing.JButton();
         del10 = new javax.swing.JButton();
         jLabel32 = new javax.swing.JLabel();
+        somaticWarningLabel = new javax.swing.JLabel();
+        somaticWarning2 = new javax.swing.JLabel();
+        jSeparator1 = new javax.swing.JSeparator();
+        jSeparator2 = new javax.swing.JSeparator();
+        jSeparator3 = new javax.swing.JSeparator();
+        jLabel22 = new javax.swing.JLabel();
+        somaticWarning3 = new javax.swing.JLabel();
+        gnomadVcf = new javax.swing.JTextField();
+        browseGenomad = new javax.swing.JButton();
+        somaticWarning4 = new javax.swing.JLabel();
+        somaticWarning5 = new javax.swing.JLabel();
+        dbsnpVCF = new javax.swing.JTextField();
+        browseDbsnp = new javax.swing.JButton();
+        clinvarVCF = new javax.swing.JTextField();
+        somaticWarning6 = new javax.swing.JLabel();
+        browseClinvar = new javax.swing.JButton();
+        somaticWarning7 = new javax.swing.JLabel();
+        jSeparator4 = new javax.swing.JSeparator();
         jLabel101 = new javax.swing.JLabel();
         thread = new javax.swing.JTextField();
         outputLabel = new javax.swing.JLabel();
@@ -4303,8 +4342,8 @@ public class VariantPipelineInternalFrame extends javax.swing.JInternalFrame {
 
         annotationGroupCombo.setEditable(true);
 
-        genomicDBPanel.setBorder(javax.swing.BorderFactory.createTitledBorder(null, "GenomicsDBImport Settings:", javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION, javax.swing.border.TitledBorder.DEFAULT_POSITION, new java.awt.Font("Liberation Sans", 1, 12), new java.awt.Color(255, 255, 255))); // NOI18N
-        genomicDBPanel.setOpaque(false);
+        intervalPanel.setBorder(javax.swing.BorderFactory.createTitledBorder(null, "GenomicsDBImport / Target Intervals Settings:", javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION, javax.swing.border.TitledBorder.DEFAULT_POSITION, new java.awt.Font("Liberation Sans", 1, 12), new java.awt.Color(255, 255, 255))); // NOI18N
+        intervalPanel.setOpaque(false);
 
         jLabel46.setFont(new java.awt.Font("Liberation Sans", 1, 12)); // NOI18N
         jLabel46.setForeground(new java.awt.Color(255, 255, 255));
@@ -4367,6 +4406,11 @@ public class VariantPipelineInternalFrame extends javax.swing.JInternalFrame {
         uploadIntervalfileR.setForeground(new java.awt.Color(255, 255, 255));
         uploadIntervalfileR.setSelected(true);
         uploadIntervalfileR.setText("To upload interval file:");
+        uploadIntervalfileR.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                uploadIntervalfileRActionPerformed(evt);
+            }
+        });
 
         createIntervalR.setFont(new java.awt.Font("Liberation Sans", 1, 12)); // NOI18N
         createIntervalR.setForeground(new java.awt.Color(255, 255, 255));
@@ -4377,59 +4421,59 @@ public class VariantPipelineInternalFrame extends javax.swing.JInternalFrame {
             }
         });
 
-        javax.swing.GroupLayout genomicDBPanelLayout = new javax.swing.GroupLayout(genomicDBPanel);
-        genomicDBPanel.setLayout(genomicDBPanelLayout);
-        genomicDBPanelLayout.setHorizontalGroup(
-            genomicDBPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(genomicDBPanelLayout.createSequentialGroup()
-                .addGroup(genomicDBPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+        javax.swing.GroupLayout intervalPanelLayout = new javax.swing.GroupLayout(intervalPanel);
+        intervalPanel.setLayout(intervalPanelLayout);
+        intervalPanelLayout.setHorizontalGroup(
+            intervalPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(intervalPanelLayout.createSequentialGroup()
+                .addGroup(intervalPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(jLabel46)
-                    .addGroup(genomicDBPanelLayout.createSequentialGroup()
+                    .addGroup(intervalPanelLayout.createSequentialGroup()
                         .addContainerGap()
-                        .addGroup(genomicDBPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addGroup(genomicDBPanelLayout.createSequentialGroup()
+                        .addGroup(intervalPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addGroup(intervalPanelLayout.createSequentialGroup()
                                 .addComponent(jScrollPane17, javax.swing.GroupLayout.PREFERRED_SIZE, 554, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addComponent(add9, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addComponent(del9, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE))
-                            .addGroup(genomicDBPanelLayout.createSequentialGroup()
+                            .addGroup(intervalPanelLayout.createSequentialGroup()
                                 .addComponent(jLabel48)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addGroup(genomicDBPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                .addGroup(intervalPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                                     .addComponent(jLabel57)
-                                    .addGroup(genomicDBPanelLayout.createSequentialGroup()
-                                        .addGroup(genomicDBPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
+                                    .addGroup(intervalPanelLayout.createSequentialGroup()
+                                        .addGroup(intervalPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
                                             .addComponent(intervalT2, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, 542, Short.MAX_VALUE)
                                             .addComponent(intervalT1, javax.swing.GroupLayout.Alignment.LEADING))
                                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                         .addComponent(intervalBtn2, javax.swing.GroupLayout.PREFERRED_SIZE, 46, javax.swing.GroupLayout.PREFERRED_SIZE))))
                             .addComponent(jLabel56)
-                            .addGroup(genomicDBPanelLayout.createSequentialGroup()
+                            .addGroup(intervalPanelLayout.createSequentialGroup()
                                 .addComponent(createIntervalR)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addComponent(jLabel49))
                             .addComponent(uploadIntervalfileR))))
                 .addContainerGap(36, Short.MAX_VALUE))
         );
-        genomicDBPanelLayout.setVerticalGroup(
-            genomicDBPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(genomicDBPanelLayout.createSequentialGroup()
+        intervalPanelLayout.setVerticalGroup(
+            intervalPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(intervalPanelLayout.createSequentialGroup()
                 .addComponent(jLabel46)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(uploadIntervalfileR)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(genomicDBPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                .addGroup(intervalPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(intervalT1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(intervalBtn2))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jLabel49)
-                .addGroup(genomicDBPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(genomicDBPanelLayout.createSequentialGroup()
+                .addGroup(intervalPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(intervalPanelLayout.createSequentialGroup()
                         .addGap(0, 0, Short.MAX_VALUE)
                         .addComponent(jLabel48)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                    .addGroup(genomicDBPanelLayout.createSequentialGroup()
+                    .addGroup(intervalPanelLayout.createSequentialGroup()
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(createIntervalR)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
@@ -4439,9 +4483,9 @@ public class VariantPipelineInternalFrame extends javax.swing.JInternalFrame {
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
                 .addComponent(jLabel56)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addGroup(genomicDBPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                .addGroup(intervalPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(jScrollPane17, javax.swing.GroupLayout.PREFERRED_SIZE, 61, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addGroup(genomicDBPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
+                    .addGroup(intervalPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
                         .addComponent(add9, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, 25, Short.MAX_VALUE)
                         .addComponent(del9, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))))
         );
@@ -4479,7 +4523,7 @@ public class VariantPipelineInternalFrame extends javax.swing.JInternalFrame {
                         .addGap(18, 18, 18)
                         .addComponent(jointModeH)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addComponent(genomicDBPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addComponent(intervalPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addGap(256, 256, 256))
                     .addGroup(germlinePanelLayout.createSequentialGroup()
                         .addGroup(germlinePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -4506,7 +4550,7 @@ public class VariantPipelineInternalFrame extends javax.swing.JInternalFrame {
                         .addComponent(jLabel24)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(ercCombo, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                    .addComponent(genomicDBPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(intervalPanel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addGap(32, 32, 32)
                 .addComponent(jLabel8)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
@@ -4621,6 +4665,11 @@ public class VariantPipelineInternalFrame extends javax.swing.JInternalFrame {
         jCheckBox5.addItemListener(new java.awt.event.ItemListener() {
             public void itemStateChanged(java.awt.event.ItemEvent evt) {
                 jCheckBox5ItemStateChanged(evt);
+            }
+        });
+        jCheckBox5.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jCheckBox5ActionPerformed(evt);
             }
         });
 
@@ -4791,7 +4840,7 @@ public class VariantPipelineInternalFrame extends javax.swing.JInternalFrame {
 
         jLabel23.setFont(new java.awt.Font("Liberation Sans", 1, 18)); // NOI18N
         jLabel23.setForeground(new java.awt.Color(255, 255, 255));
-        jLabel23.setText("Variant Filteration  after Annotation (SnpSIFT):");
+        jLabel23.setText("2- Downstream Annotation & Filtering (SnpSift):");
 
         add2.setFont(new java.awt.Font("Liberation Sans", 1, 18)); // NOI18N
         add2.setIcon(new javax.swing.ImageIcon("/home/iffy/NetBeansProjects/NGSGradle/app/images/plusSs.png")); // NOI18N
@@ -4885,7 +4934,7 @@ public class VariantPipelineInternalFrame extends javax.swing.JInternalFrame {
 
         jLabel35.setFont(new java.awt.Font("Liberation Sans", 1, 15)); // NOI18N
         jLabel35.setForeground(new java.awt.Color(255, 255, 255));
-        jLabel35.setText("Filter String: Do not delete [SNPEFF] or [VEP] tags. Write/select your expressions directly below or beside each tag header.");
+        jLabel35.setText("SnpSift Expression Filter:: Do not delete [SNPEFF] or [VEP] tags. Write/select your expressions directly below or beside each tag header.");
         jLabel35.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent evt) {
                 jLabel35MouseClicked(evt);
@@ -4985,135 +5034,236 @@ public class VariantPipelineInternalFrame extends javax.swing.JInternalFrame {
         jLabel32.setForeground(new java.awt.Color(255, 255, 255));
         jLabel32.setText("VariantFilteration:");
 
+        somaticWarningLabel.setFont(new java.awt.Font("Liberation Sans", 1, 14)); // NOI18N
+        somaticWarningLabel.setForeground(new java.awt.Color(255, 255, 255));
+        somaticWarningLabel.setText("VariantFilteration:");
+
+        somaticWarning2.setFont(new java.awt.Font("Liberation Sans", 1, 14)); // NOI18N
+        somaticWarning2.setForeground(new java.awt.Color(255, 255, 255));
+        somaticWarning2.setText("Enter SNPSIFT ANNOTATION DATABASES (Population & Clinical)");
+
+        jLabel22.setFont(new java.awt.Font("Liberation Sans", 1, 18)); // NOI18N
+        jLabel22.setForeground(new java.awt.Color(255, 255, 255));
+        jLabel22.setText("1: Primary Functional Annotation");
+
+        somaticWarning3.setFont(new java.awt.Font("Liberation Sans", 1, 14)); // NOI18N
+        somaticWarning3.setForeground(new java.awt.Color(255, 255, 255));
+        somaticWarning3.setText("gnomAD VCF:");
+
+        gnomadVcf.setEditable(false);
+
+        browseGenomad.setText("...");
+        browseGenomad.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                browseGenomadActionPerformed(evt);
+            }
+        });
+
+        somaticWarning4.setFont(new java.awt.Font("Liberation Sans", 1, 14)); // NOI18N
+        somaticWarning4.setForeground(new java.awt.Color(255, 255, 255));
+        somaticWarning4.setText("Variant Filteration  after Annotation (SnpSIFT):");
+
+        somaticWarning5.setFont(new java.awt.Font("Liberation Sans", 1, 14)); // NOI18N
+        somaticWarning5.setForeground(new java.awt.Color(255, 255, 255));
+        somaticWarning5.setText("dbSNP VCF:");
+
+        dbsnpVCF.setEditable(false);
+
+        browseDbsnp.setText("...");
+        browseDbsnp.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                browseDbsnpActionPerformed(evt);
+            }
+        });
+
+        clinvarVCF.setEditable(false);
+
+        somaticWarning6.setFont(new java.awt.Font("Liberation Sans", 1, 14)); // NOI18N
+        somaticWarning6.setForeground(new java.awt.Color(255, 255, 255));
+        somaticWarning6.setText("ClinVar VCF:");
+
+        browseClinvar.setText("...");
+        browseClinvar.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                browseClinvarActionPerformed(evt);
+            }
+        });
+
+        somaticWarning7.setFont(new java.awt.Font("Liberation Sans", 1, 14)); // NOI18N
+        somaticWarning7.setForeground(new java.awt.Color(255, 255, 255));
+        somaticWarning7.setText("Enter SNPSIFT ANNOTATION DATABASES (Population & Clinical)");
+
         javax.swing.GroupLayout FilterPanelLayout = new javax.swing.GroupLayout(FilterPanel);
         FilterPanel.setLayout(FilterPanelLayout);
         FilterPanelLayout.setHorizontalGroup(
             FilterPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(FilterPanelLayout.createSequentialGroup()
-                .addContainerGap()
                 .addGroup(FilterPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jSeparator2)
+                    .addComponent(jSeparator3)
                     .addGroup(FilterPanelLayout.createSequentialGroup()
-                        .addGap(7, 7, 7)
                         .addGroup(FilterPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(jScrollPane10, javax.swing.GroupLayout.PREFERRED_SIZE, 937, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addComponent(jLabel18)
-                            .addComponent(jLabel40)
-                            .addComponent(jLabel34)
                             .addGroup(FilterPanelLayout.createSequentialGroup()
-                                .addComponent(jLabel17)
-                                .addGap(29, 29, 29)
-                                .addComponent(selectVariantsOp))
-                            .addComponent(jLabel36)
-                            .addComponent(jLabel20)
+                                .addGap(9, 9, 9)
+                                .addComponent(somaticWarning3, javax.swing.GroupLayout.PREFERRED_SIZE, 106, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(gnomadVcf))
                             .addGroup(FilterPanelLayout.createSequentialGroup()
-                                .addGap(15, 15, 15)
+                                .addContainerGap()
                                 .addGroup(FilterPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                                     .addGroup(FilterPanelLayout.createSequentialGroup()
-                                        .addGroup(FilterPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                            .addComponent(jCheckBox5)
-                                            .addComponent(jCheckBox6)
-                                            .addComponent(jCheckBox7)
-                                            .addComponent(jCheckBox8))
-                                        .addGap(12, 12, 12)
-                                        .addGroup(FilterPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.CENTER)
-                                            .addComponent(selectTypeCombo, javax.swing.GroupLayout.PREFERRED_SIZE, 221, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                            .addComponent(select, javax.swing.GroupLayout.PREFERRED_SIZE, 221, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                            .addComponent(selectGenotype, javax.swing.GroupLayout.PREFERRED_SIZE, 221, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                            .addComponent(Linterval, javax.swing.GroupLayout.PREFERRED_SIZE, 221, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                        .addGap(6, 6, 6)
+                                        .addComponent(somaticWarning6, javax.swing.GroupLayout.PREFERRED_SIZE, 106, javax.swing.GroupLayout.PREFERRED_SIZE)
                                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                        .addGroup(FilterPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                            .addGroup(FilterPanelLayout.createSequentialGroup()
-                                                .addComponent(add3, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                                .addComponent(del3, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE))
-                                            .addGroup(FilterPanelLayout.createSequentialGroup()
-                                                .addComponent(intervalBtn1, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                                .addComponent(add4, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                                .addComponent(del4, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE))
-                                            .addGroup(FilterPanelLayout.createSequentialGroup()
-                                                .addGroup(FilterPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                                    .addGroup(FilterPanelLayout.createSequentialGroup()
-                                                        .addComponent(add1, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                                        .addComponent(del1, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE))
-                                                    .addGroup(FilterPanelLayout.createSequentialGroup()
-                                                        .addComponent(add2, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                                        .addComponent(del2, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                                                .addGap(53, 53, 53)
-                                                .addGroup(FilterPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                                    .addComponent(excludeFiltered)
-                                                    .addGroup(FilterPanelLayout.createSequentialGroup()
-                                                        .addComponent(restrictAlleles)
-                                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                                        .addComponent(restrictAlleleCombo, javax.swing.GroupLayout.PREFERRED_SIZE, 159, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                                        .addComponent(add10, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                                        .addComponent(del10, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE))))))
-                                    .addComponent(jScrollPane7, javax.swing.GroupLayout.PREFERRED_SIZE, 937, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                    .addComponent(jLabel41)))
-                            .addComponent(jLabel32)))
-                    .addComponent(jLabel19)
-                    .addComponent(jLabel25)
-                    .addGroup(FilterPanelLayout.createSequentialGroup()
-                        .addComponent(jLabel21)
-                        .addGap(20, 20, 20)
-                        .addComponent(snpEff_DB, javax.swing.GroupLayout.PREFERRED_SIZE, 255, javax.swing.GroupLayout.PREFERRED_SIZE))
-                    .addGroup(FilterPanelLayout.createSequentialGroup()
-                        .addGap(8, 8, 8)
+                                        .addComponent(clinvarVCF))
+                                    .addGroup(FilterPanelLayout.createSequentialGroup()
+                                        .addComponent(somaticWarning5, javax.swing.GroupLayout.PREFERRED_SIZE, 106, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addGap(12, 12, 12)
+                                        .addComponent(dbsnpVCF)))))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                         .addGroup(FilterPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(jScrollPane13, javax.swing.GroupLayout.PREFERRED_SIZE, 937, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addComponent(jLabel35)))
+                            .addComponent(browseDbsnp)
+                            .addComponent(browseGenomad)
+                            .addComponent(browseClinvar))
+                        .addGap(271, 271, 271))
+                    .addComponent(somaticWarning7, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addGroup(FilterPanelLayout.createSequentialGroup()
-                        .addGap(6, 6, 6)
-                        .addComponent(jLabel13)
-                        .addGap(18, 18, 18)
-                        .addComponent(snpSiftCombobox, javax.swing.GroupLayout.PREFERRED_SIZE, 686, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(18, 18, 18)
-                        .addComponent(add8, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(del8, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE))
-                    .addComponent(jLabel23)
-                    .addComponent(jLabel43)
-                    .addGroup(FilterPanelLayout.createSequentialGroup()
-                        .addComponent(jLabel26)
-                        .addGap(18, 18, 18)
-                        .addComponent(variantFilterA))
-                    .addGroup(FilterPanelLayout.createSequentialGroup()
-                        .addComponent(snpEffRadio)
-                        .addGap(18, 18, 18)
-                        .addComponent(vepRadio)
-                        .addGap(18, 18, 18)
-                        .addComponent(snpEffvepRadio))
-                    .addGroup(FilterPanelLayout.createSequentialGroup()
-                        .addGap(6, 6, 6)
                         .addGroup(FilterPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addGroup(FilterPanelLayout.createSequentialGroup()
-                                .addComponent(jLabel15)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                                .addComponent(vepAssembly, javax.swing.GroupLayout.PREFERRED_SIZE, 211, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addGap(34, 34, 34)
-                                .addComponent(jLabel16)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                                .addComponent(vepSpecies, javax.swing.GroupLayout.PREFERRED_SIZE, 225, javax.swing.GroupLayout.PREFERRED_SIZE))
-                            .addComponent(jLabel1)))
+                                .addGap(8, 8, 8)
+                                .addGroup(FilterPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                    .addComponent(jScrollPane13, javax.swing.GroupLayout.PREFERRED_SIZE, 937, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                    .addComponent(jLabel35)))
+                            .addGroup(FilterPanelLayout.createSequentialGroup()
+                                .addGap(6, 6, 6)
+                                .addComponent(jLabel13)
+                                .addGap(18, 18, 18)
+                                .addComponent(snpSiftCombobox, javax.swing.GroupLayout.PREFERRED_SIZE, 686, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addGap(18, 18, 18)
+                                .addComponent(add8, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(del8, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addComponent(jLabel43))
+                        .addGap(0, 6, Short.MAX_VALUE))
                     .addGroup(FilterPanelLayout.createSequentialGroup()
-                        .addGap(22, 22, 22)
-                        .addComponent(jLabel12)
-                        .addGap(18, 18, 18)
-                        .addComponent(filterNameB, javax.swing.GroupLayout.PREFERRED_SIZE, 221, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(155, 155, 155)
-                        .addComponent(jLabel3)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(filterExprB, javax.swing.GroupLayout.PREFERRED_SIZE, 221, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(add5, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(del5, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                        .addContainerGap()
+                        .addGroup(FilterPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(jSeparator1, javax.swing.GroupLayout.Alignment.TRAILING)
+                            .addComponent(somaticWarning2, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addComponent(somaticWarning4, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addGroup(FilterPanelLayout.createSequentialGroup()
+                                .addGroup(FilterPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                    .addGroup(FilterPanelLayout.createSequentialGroup()
+                                        .addGap(7, 7, 7)
+                                        .addGroup(FilterPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                            .addComponent(jScrollPane10, javax.swing.GroupLayout.PREFERRED_SIZE, 937, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                            .addComponent(jLabel18)
+                                            .addComponent(jLabel40)
+                                            .addComponent(jLabel34)
+                                            .addGroup(FilterPanelLayout.createSequentialGroup()
+                                                .addComponent(jLabel17)
+                                                .addGap(29, 29, 29)
+                                                .addComponent(selectVariantsOp))
+                                            .addComponent(jLabel36)
+                                            .addComponent(jLabel20)
+                                            .addGroup(FilterPanelLayout.createSequentialGroup()
+                                                .addGap(15, 15, 15)
+                                                .addGroup(FilterPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                                    .addGroup(FilterPanelLayout.createSequentialGroup()
+                                                        .addGroup(FilterPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                                            .addComponent(jCheckBox5)
+                                                            .addComponent(jCheckBox6)
+                                                            .addComponent(jCheckBox7)
+                                                            .addComponent(jCheckBox8))
+                                                        .addGap(12, 12, 12)
+                                                        .addGroup(FilterPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.CENTER)
+                                                            .addComponent(selectTypeCombo, javax.swing.GroupLayout.PREFERRED_SIZE, 221, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                            .addComponent(select, javax.swing.GroupLayout.PREFERRED_SIZE, 221, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                            .addComponent(selectGenotype, javax.swing.GroupLayout.PREFERRED_SIZE, 221, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                            .addComponent(Linterval, javax.swing.GroupLayout.PREFERRED_SIZE, 221, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                                        .addGroup(FilterPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                                            .addGroup(FilterPanelLayout.createSequentialGroup()
+                                                                .addComponent(add3, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                                                .addComponent(del3, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                                            .addGroup(FilterPanelLayout.createSequentialGroup()
+                                                                .addComponent(intervalBtn1, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                                                .addComponent(add4, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                                                .addComponent(del4, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                                            .addGroup(FilterPanelLayout.createSequentialGroup()
+                                                                .addGroup(FilterPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                                                    .addGroup(FilterPanelLayout.createSequentialGroup()
+                                                                        .addComponent(add1, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                                                        .addComponent(del1, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                                                    .addGroup(FilterPanelLayout.createSequentialGroup()
+                                                                        .addComponent(add2, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                                                        .addComponent(del2, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                                                                .addGap(53, 53, 53)
+                                                                .addGroup(FilterPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                                                    .addComponent(excludeFiltered)
+                                                                    .addGroup(FilterPanelLayout.createSequentialGroup()
+                                                                        .addComponent(restrictAlleles)
+                                                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                                                        .addComponent(restrictAlleleCombo, javax.swing.GroupLayout.PREFERRED_SIZE, 159, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                                                        .addComponent(add10, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                                                        .addComponent(del10, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE))))))
+                                                    .addComponent(jScrollPane7, javax.swing.GroupLayout.PREFERRED_SIZE, 937, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                    .addComponent(jLabel41)))
+                                            .addComponent(jLabel32)
+                                            .addComponent(somaticWarningLabel)))
+                                    .addComponent(jLabel19)
+                                    .addComponent(jLabel25)
+                                    .addGroup(FilterPanelLayout.createSequentialGroup()
+                                        .addComponent(jLabel21)
+                                        .addGap(20, 20, 20)
+                                        .addComponent(snpEff_DB, javax.swing.GroupLayout.PREFERRED_SIZE, 255, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                    .addComponent(jLabel23)
+                                    .addGroup(FilterPanelLayout.createSequentialGroup()
+                                        .addComponent(snpEffRadio)
+                                        .addGap(18, 18, 18)
+                                        .addComponent(vepRadio)
+                                        .addGap(18, 18, 18)
+                                        .addComponent(snpEffvepRadio))
+                                    .addGroup(FilterPanelLayout.createSequentialGroup()
+                                        .addGap(6, 6, 6)
+                                        .addGroup(FilterPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                            .addGroup(FilterPanelLayout.createSequentialGroup()
+                                                .addComponent(jLabel15)
+                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                                                .addComponent(vepAssembly, javax.swing.GroupLayout.PREFERRED_SIZE, 211, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                .addGap(34, 34, 34)
+                                                .addComponent(jLabel16)
+                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                                                .addComponent(vepSpecies, javax.swing.GroupLayout.PREFERRED_SIZE, 225, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                            .addComponent(jLabel1)))
+                                    .addGroup(FilterPanelLayout.createSequentialGroup()
+                                        .addGap(22, 22, 22)
+                                        .addComponent(jLabel12)
+                                        .addGap(18, 18, 18)
+                                        .addComponent(filterNameB, javax.swing.GroupLayout.PREFERRED_SIZE, 221, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addGap(155, 155, 155)
+                                        .addComponent(jLabel3)
+                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                        .addComponent(filterExprB, javax.swing.GroupLayout.PREFERRED_SIZE, 221, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                        .addComponent(add5, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                        .addComponent(del5, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                    .addComponent(jLabel22)
+                                    .addGroup(FilterPanelLayout.createSequentialGroup()
+                                        .addComponent(jLabel26)
+                                        .addGap(18, 18, 18)
+                                        .addComponent(variantFilterA)))
+                                .addGap(0, 0, Short.MAX_VALUE))
+                            .addComponent(jSeparator4))))
+                .addContainerGap())
         );
         FilterPanelLayout.setVerticalGroup(
             FilterPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -5122,6 +5272,8 @@ public class VariantPipelineInternalFrame extends javax.swing.JInternalFrame {
                 .addComponent(jLabel18)
                 .addGap(15, 15, 15)
                 .addComponent(jLabel32)
+                .addGap(15, 15, 15)
+                .addComponent(somaticWarningLabel)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(jLabel40)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
@@ -5140,7 +5292,9 @@ public class VariantPipelineInternalFrame extends javax.swing.JInternalFrame {
                 .addComponent(jLabel34)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jScrollPane10, javax.swing.GroupLayout.PREFERRED_SIZE, 70, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addGap(1, 1, 1)
+                .addComponent(jSeparator1, javax.swing.GroupLayout.PREFERRED_SIZE, 10, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(1, 1, 1)
                 .addGroup(FilterPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel17)
                     .addComponent(selectVariantsOp))
@@ -5191,8 +5345,12 @@ public class VariantPipelineInternalFrame extends javax.swing.JInternalFrame {
                 .addComponent(jLabel41)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jScrollPane7, javax.swing.GroupLayout.PREFERRED_SIZE, 76, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addGap(4, 4, 4)
+                .addComponent(jSeparator2, javax.swing.GroupLayout.PREFERRED_SIZE, 10, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jLabel19)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jLabel22)
                 .addGap(23, 23, 23)
                 .addGroup(FilterPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(snpEffRadio)
@@ -5212,13 +5370,32 @@ public class VariantPipelineInternalFrame extends javax.swing.JInternalFrame {
                     .addComponent(jLabel16)
                     .addComponent(vepAssembly, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(vepSpecies, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 26, Short.MAX_VALUE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jSeparator3, javax.swing.GroupLayout.PREFERRED_SIZE, 10, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(jLabel23)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addGroup(FilterPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel26)
-                    .addComponent(variantFilterA))
                 .addGap(18, 18, 18)
+                .addComponent(somaticWarning7, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(27, 27, 27)
+                .addGroup(FilterPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(gnomadVcf, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(somaticWarning3, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(browseGenomad))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(FilterPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(dbsnpVCF, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(somaticWarning5, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(browseDbsnp))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(FilterPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(clinvarVCF, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(somaticWarning6, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(browseClinvar))
+                .addGap(10, 10, 10)
+                .addComponent(jSeparator4, javax.swing.GroupLayout.PREFERRED_SIZE, 10, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(18, 18, 18)
+                .addComponent(somaticWarning2, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(14, 14, 14)
                 .addComponent(jLabel43)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addGroup(FilterPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -5231,7 +5408,12 @@ public class VariantPipelineInternalFrame extends javax.swing.JInternalFrame {
                 .addComponent(jLabel35)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jScrollPane13, javax.swing.GroupLayout.PREFERRED_SIZE, 178, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap())
+                .addGap(18, 18, Short.MAX_VALUE)
+                .addComponent(somaticWarning4, javax.swing.GroupLayout.PREFERRED_SIZE, 27, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(FilterPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel26)
+                    .addComponent(variantFilterA)))
         );
 
         jLabel101.setFont(new java.awt.Font("Liberation Sans", 1, 14)); // NOI18N
@@ -5853,8 +6035,8 @@ public class VariantPipelineInternalFrame extends javax.swing.JInternalFrame {
                         inputFilesDataP(pairPathMap, selectedKey);
                     }
 
-                    //  runFastq_Variant();
-                    runBam_Variant();
+                     runFastq_Variant();
+                   
                 } else if (inputOptions.getSelectedIndex() == 2) {
                     inputFilesDataS(singlePathMap, selectedKey);
 
@@ -5945,11 +6127,42 @@ public class VariantPipelineInternalFrame extends javax.swing.JInternalFrame {
         if (somatic.isSelected()) {
 
             mutect2Panel.setVisible(true);
+//            somaticWarningLabel.setText(
+//    "NOTE: Somatic Filtering Pipeline (Mutect2):" +
+//    "Standard GATK VariantFiltration hard filters are not applied to Mutect2 calls." +
+//    "Instead, the somatic workflow executes LearnReadOrientationModel (to model orientation bias artifacts) " +
+//    "followed by FilterMutectCalls(for dynamic Bayesian artifact and germline filtering)."
+//);
+//somaticWarning2.setText(
+//    "NOTE: " +
+//    "To avoid overwriting Mutect2's native sample VAF (AF tag), external annotations use the prefix\"M_\"" +
+//    "Please format SnpSift population frequency filters using the prefixed tag (e.g., ((!exists M_AF) || (M_AF <= 0.001))) " +
+//    "rather than plain AF."
+//);
+
+somaticWarningLabel.setText(
+    "<html><body style='width: 350px;'>" +
+    "<b>NOTE: Somatic Filtering Pipeline (Mutect2):</b> " +
+    "Standard GATK VariantFiltration hard filters are not applied to Mutect2 calls." +
+    "Instead, the somatic workflow executes LearnReadOrientationModel (to model orientation bias artifacts)<br> " +
+    "followed by FilterMutectCalls (for dynamic Bayesian artifact and germline filtering)." +
+    "</body></html>"
+);
+
+somaticWarning2.setText(
+    "<html><body style='width: 350px;'>" +
+    "<b>NOTE: SnpSift Annotation Notice:</b> " +
+    "To avoid overwriting Mutect2's native sample VAF (AF tag), external annotations use the prefix \"M_\".<br>" +
+    "Please format SnpSift population frequency filters using the prefixed tag (e.g., ((!exists M_AF) || (M_AF &lt;= 0.001))) " +
+    "rather than plain AF." +
+    "</body></html>"
+);
 
         } else {
 
             mutect2Panel.setVisible(false);
-
+somaticWarningLabel.setText("");
+somaticWarning2.setText("");
         }
     }//GEN-LAST:event_somaticItemStateChanged
 
@@ -6493,7 +6706,7 @@ public class VariantPipelineInternalFrame extends javax.swing.JInternalFrame {
         };
     }
 
-    void HCC_WES() {
+    public void HCC_WES() {
 
         listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972531_1.fastq.gz\"");
         listModelreadPair1.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972532_1.fastq.gz\"");
@@ -6700,115 +6913,115 @@ public class VariantPipelineInternalFrame extends javax.swing.JInternalFrame {
     }//HCC_WES
 
     public void HCC_RNASeq() {
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972486.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972434.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972487.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972431.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972494.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972496.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972505.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972480.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972461.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972440.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972450.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972426.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972446.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972414.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972419.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972412.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972428.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972427.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972484.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972475.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972443.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972410.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972478.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972490.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972433.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972506.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972465.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972477.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972476.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972442.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972454.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972416.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972421.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972408.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972474.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972479.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972482.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972435.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972504.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972432.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972413.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972409.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972462.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972473.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972467.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972458.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972415.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972471.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972502.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972472.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972448.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972464.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972449.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972488.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972445.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972436.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972483.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972430.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972417.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972453.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972501.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972420.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972451.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972447.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972457.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972411.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972459.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972422.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972452.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972444.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972456.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972429.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972441.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972466.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972407.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972493.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972499.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972469.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972485.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972438.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972489.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972460.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972495.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972439.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972481.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972497.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972498.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972437.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972492.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972425.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972468.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972500.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972418.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972423.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972503.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972463.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972424.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972470.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972491.star.Aligned.sortedByCoord.out.bam\"");
-        listModel.addElement("\"/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/SRR20972455.star.Aligned.sortedByCoord.out.bam\"");
+    listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972531.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972532.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972533.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972534.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972535.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972536.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972537.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972538.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972539.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972540.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972541.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972542.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972543.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972544.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972545.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972546.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972547.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972548.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972549.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972550.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972551.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972552.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972553.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972554.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972555.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972556.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972557.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972558.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972559.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972560.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972561.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972562.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972563.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972564.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972565.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972566.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972567.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972568.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972569.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972570.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972571.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972572.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972573.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972574.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972575.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972576.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972577.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972578.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972579.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972580.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972581.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972582.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972583.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972584.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972585.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972586.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972587.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972588.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972589.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972590.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972591.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972592.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972593.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972594.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972595.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972596.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972597.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972598.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972599.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972600.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972601.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972602.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972603.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972604.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972605.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972606.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972607.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972608.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972609.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972610.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972611.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972612.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972613.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972614.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972615.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972616.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972617.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972618.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972619.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972620.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972621.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972622.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972623.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972624.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972625.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972626.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972627.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972628.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972629.bam\"");
+        listModel.addElement("\"/home/iffy/HCC/InputFiles/trimmed/SRR20972630.bam\"");
     }
 
     private void jLabel2MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jLabel2MouseClicked
 
         //  output_Dir.setText("/media/nigab/sdc1/Wajya/Iffat/Output_WESsNew");
         output_Dir.setText("/home/iffy/PhD_Data/CASESTUDY/1-Hepatocellular_carcinoma_100/WES_PRJNA866195/VCF_WESsNew/");
-        HCC_WES();
+       // HCC_WES();
 //output_Dir.setText("/media/nigab/sdc1/Wajya/Iffat/Output_RNASeq1/VariantCalling_RNASeq1");
-//HCC_RNASeq();
+HCC_RNASeq();
     }//GEN-LAST:event_jLabel2MouseClicked
 
     private void inputBamTxtKeyPressed(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_inputBamTxtKeyPressed
@@ -6930,11 +7143,13 @@ public class VariantPipelineInternalFrame extends javax.swing.JInternalFrame {
             Linterval.setEditable(true);
             add4.setEnabled(true);
             del4.setEnabled(true);
+            intervalBtn1.setEnabled(true);
         } else {
             Linterval.setText(null);
             Linterval.setEditable(false);
             add4.setEnabled(false);
             del4.setEnabled(false);
+            intervalBtn1.setEnabled(false);
         }
         if (!jCheckBox5.isSelected() && !jCheckBox6.isSelected()
                 && !jCheckBox7.isSelected() && !jCheckBox8.isSelected()) {
@@ -7168,7 +7383,7 @@ public class VariantPipelineInternalFrame extends javax.swing.JInternalFrame {
                 comboTxt = comboTxt.substring(0, index).trim();
             }
 
-            String txtAdd = "-G " + comboTxt.toUpperCase() + " ";
+            String txtAdd = comboTxt.toUpperCase() + " ";
             if (!txtContent.contains(txtAdd)) {
                 annotationGroupTxt.append(txtAdd);
             }
@@ -7185,7 +7400,7 @@ public class VariantPipelineInternalFrame extends javax.swing.JInternalFrame {
                 comboTxt = comboTxt.substring(0, index).trim();
             }
 
-            String txtDel = "-G " + comboTxt.toUpperCase() + " ";
+            String txtDel = comboTxt.toUpperCase() + " ";
 
             if (txtContent.contains(txtDel)) {
 
@@ -7342,38 +7557,39 @@ public class VariantPipelineInternalFrame extends javax.swing.JInternalFrame {
     }//GEN-LAST:event_add8ActionPerformed
 
     private void insertUnderTag(String tag, String exprToAdd) {
-    String text = variantFilterTxtA.getText();
-    int tagIndex = text.indexOf(tag);
+        String text = variantFilterTxtA.getText();
+        int tagIndex = text.indexOf(tag);
 
-    if (tagIndex != -1) {
-        // Find end of line after the tag
-        int lineEnd = text.indexOf("\n", tagIndex);
-        if (lineEnd == -1) {
-            lineEnd = text.length();
+        if (tagIndex != -1) {
+            // Find end of line after the tag
+            int lineEnd = text.indexOf("\n", tagIndex);
+            if (lineEnd == -1) {
+                lineEnd = text.length();
+            }
+
+            StringBuilder sb = new StringBuilder(text);
+            // Insert expression on a new line right after the tag header
+            sb.insert(lineEnd, exprToAdd);
+            variantFilterTxtA.setText(sb.toString());
+        } else {
+            variantFilterTxtA.append(exprToAdd);
         }
-
-        StringBuilder sb = new StringBuilder(text);
-        // Insert expression on a new line right after the tag header
-        sb.insert(lineEnd, exprToAdd);
-        variantFilterTxtA.setText(sb.toString());
-    } else {
-        variantFilterTxtA.append(  exprToAdd);
     }
-}
-private void insertAtCaretOrEnd(String exprToAdd) {
-    int caretPos = variantFilterTxtA.getCaretPosition();
-    String text = variantFilterTxtA.getText();
 
-    if (caretPos >= 0 && caretPos <= text.length()) {
-        StringBuilder sb = new StringBuilder(text);
-        sb.insert(caretPos, exprToAdd);
-        variantFilterTxtA.setText(sb.toString());
-        variantFilterTxtA.setCaretPosition(caretPos + exprToAdd.length());
-    } else {
-        variantFilterTxtA.append(exprToAdd);
+    private void insertAtCaretOrEnd(String exprToAdd) {
+        int caretPos = variantFilterTxtA.getCaretPosition();
+        String text = variantFilterTxtA.getText();
+
+        if (caretPos >= 0 && caretPos <= text.length()) {
+            StringBuilder sb = new StringBuilder(text);
+            sb.insert(caretPos, exprToAdd);
+            variantFilterTxtA.setText(sb.toString());
+            variantFilterTxtA.setCaretPosition(caretPos + exprToAdd.length());
+        } else {
+            variantFilterTxtA.append(exprToAdd);
+        }
     }
-}    
-    
+
     private void del8ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_del8ActionPerformed
         String txtContent = variantFilterTxtA.getText();
         String selectedExpr = (String) snpSiftCombobox.getSelectedItem();
@@ -7386,30 +7602,30 @@ private void insertAtCaretOrEnd(String exprToAdd) {
 //            }
 //        }
 //CorrectionDone
-if (selectedExpr == null || selectedExpr.isBlank()) {
-        return;
-    }
+        if (selectedExpr == null || selectedExpr.isBlank()) {
+            return;
+        }
 
-    String targetTrimmed = selectedExpr.trim();
+        String targetTrimmed = selectedExpr.trim();
 
-    // Search and remove the expression regardless of extra spaces around it
-    if (txtContent.contains(targetTrimmed)) {
-        // Removes target expression and trailing space if present
-        txtContent = txtContent.replace(targetTrimmed + " ", "")
-                               .replace(targetTrimmed, "");
-        variantFilterTxtA.setText(txtContent);
-    }
+        // Search and remove the expression regardless of extra spaces around it
+        if (txtContent.contains(targetTrimmed)) {
+            // Removes target expression and trailing space if present
+            txtContent = txtContent.replace(targetTrimmed + " ", "")
+                    .replace(targetTrimmed, "");
+            variantFilterTxtA.setText(txtContent);
+        }
 
     }//GEN-LAST:event_del8ActionPerformed
 
     private void jLabel28MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jLabel28MouseClicked
 
         //WES-Setting: NIGAB PC
-        refTxt.setText("/media/nigab/sda1/Iffat/Reference/star_index/GRCh38.p14.genome.fa");
-        listKnownSites.addElement("/media/nigab/sda1/Iffat/VCF/resources_broad_hg38_v0_1000G_phase1.snps.high_confidence.hg38.vcf.gz");
-        listKnownSites.addElement("/media/nigab/sda1/Iffat/VCF/resources_broad_hg38_v0_hapmap_3.3.hg38.vcf.gz");
-        listKnownSites.addElement("/media/nigab/sda1/Iffat/VCF/resources_broad_hg38_v0_Mills_and_1000G_gold_standard.indels.hg38.vcf.gz");
-        intervalT1.setText("/media/nigab/sda1/Iffat/VCF/resources_broad_hg38_v0_wgs_calling_regions.hg38.interval_list");
+        refTxt.setText("/media/iffy/Ventoy/Reference/star_index/GRCh38.p14.genome.fa");
+        listKnownSites.addElement("/mnt/ntfs/VCF/resources_broad_hg38_v0_1000G_phase1.snps.high_confidence.hg38.vcf.gz");
+        listKnownSites.addElement("/mnt/ntfs/VCF/resources_broad_hg38_v0_hapmap_3.3.hg38.vcf.gz");
+        listKnownSites.addElement("/mnt/ntfs/VCF/resources_broad_hg38_v0_Mills_and_1000G_gold_standard.indels.hg38.vcf.gz");
+        intervalT1.setText("/mnt/ntfs/VCF/resources_broad_hg38_v0_wgs_calling_regions.hg38.interval_list");
 
 // For WES-University PC
 //        refTxt.setText("/media/dr/9d1c8592-358c-4c9b-bfe6-d7c6e2a62be0/home/computer/Iffat/Genomes_indexed/GRCh38.p13.genome.fa");
@@ -7427,12 +7643,17 @@ if (selectedExpr == null || selectedExpr.isBlank()) {
         variantFilterA.setSelected(true);
 
         bwaM.setSelected(true);
-        thread.setText("18");
+        thread.setText("01");
+       selectVariantTxt.setText("--select-type-to-include SNP --select-type-to-include INDEL --select-type-to-include MNP --select-type-to-include MIXED");
+        variantFilterTxtB.setText("--filter-name \"SNP_HardFilter\"  --filter-expression \"vc.isSNP() && (QD < 2.0 || QUAL < 30.0 || FS > 60.0 || MQ < 40.0 || MQRankSum < -12.5 || ReadPosRankSum < -8.0)\" --filter-name \"INDEL_HardFilter\"   --filter-expression \"vc.isIndel() && (QD < 2.0 || QUAL < 30.0 || FS > 200.0 || ReadPosRankSum < -20.0)\" ");
+        variantFilterTxtA.setText("!(ANN[*].EFFECT has 'intergenic_region') & !(ANN[*].EFFECT has 'intron_variant') & !(ANN[*].EFFECT has 'synonymous_variant') & (!exists AF | AF[*] < 0.001)");
+        
+        
         // For WES Variant Calling
-        selectVariantTxt.setText("--select-type-to-include SNP --select-type-to-include INDEL --select-type-to-include MNP --select-type-to-include MIXED    --select 'AF[0] >= 0.01'");
-        variantFilterTxtB.setText("--filter-name \"WES_HardFilter\" --filter-expression \"QD < 2.0 || FS > 200.0 || MQ < 40.0\" ");
-        variantFilterTxtA.setText("[SNPEFF]  !(ANN[*].EFFECT has 'intergenic_region') & !(ANN[*].EFFECT has 'intron_variant') & !(ANN[*].EFFECT has 'synonymous_variant') & (exists AF) & (AF[*] >= 0.01) \n "
-                + "[VEP] !(CSQ[*] =~ 'intergenic_region|intron_variant|synonymous_variant') && (exists AF) && (AF[*] >= 0.01) ");
+        // selectVariantTxt.setText("--select-type-to-include SNP --select-type-to-include INDEL --select-type-to-include MNP --select-type-to-include MIXED    --select 'AF[0] >= 0.01'");
+        //variantFilterTxtB.setText("--filter-name \"WES_HardFilter\" --filter-expression \"QD < 2.0 || FS > 200.0 || MQ < 40.0\" ");
+        //variantFilterTxtA.setText("[SNPEFF]  !(ANN[*].EFFECT has 'intergenic_region') & !(ANN[*].EFFECT has 'intron_variant') & !(ANN[*].EFFECT has 'synonymous_variant') & (exists AF) & (AF[*] >= 0.01) \n "
+          //      + "[VEP] !(CSQ[*] =~ 'intergenic_region|intron_variant|synonymous_variant') && (exists AF) && (AF[*] >= 0.01) ");
         // For RNA-Seq Variant Calling
         //selectVariantTxt.setText("--select-type-to-include SNP --select-type-to-include INDEL --select-type-to-include MNP --select-type-to-include MIXED    --select 'AF[0] >= 0.01'");
         // variantFilterTxtB.setText("--filter-name \"RNASeq_HardFilter\" --filter-expression \"QD < 2.0 || FS > 30.0 || SOR > 3.0 || MQ < 40.0 || DP < 10\" ");
@@ -7618,17 +7839,17 @@ if (selectedExpr == null || selectedExpr.isBlank()) {
     }//GEN-LAST:event_knownSitesKeyPressed
 
     private void jointModeHActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jointModeHActionPerformed
-        genomicDBPanel.setVisible(true);
+        intervalPanel.setVisible(true);
     }//GEN-LAST:event_jointModeHActionPerformed
 
     private void singleModeHActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_singleModeHActionPerformed
-        genomicDBPanel.setVisible(false);
+        intervalPanel.setVisible(true);
     }//GEN-LAST:event_singleModeHActionPerformed
 
     private void del9ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_del9ActionPerformed
         String txtContent = intervalText1.getText();
-        if (!intervalT.getText().isBlank()) {
-            String txtDel = "-L " + intervalT1.getText().toLowerCase() + " ";
+        if (!intervalT2.getText().isBlank()) {
+            String txtDel = "-L " + intervalT2.getText().toLowerCase() + " ";
             if (!txtContent.contains(txtDel)) {
                 txtContent = txtContent.replace(txtDel, "");
                 intervalText1.append(txtDel);
@@ -7639,8 +7860,8 @@ if (selectedExpr == null || selectedExpr.isBlank()) {
 
     private void add9ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_add9ActionPerformed
         String txtContent = intervalText1.getText();
-        if (!intervalT1.getText().isBlank()) {
-            String txtAdd = "-L " + intervalT1.getText().toLowerCase() + " ";
+        if (!intervalT2.getText().isBlank()) {
+            String txtAdd = "-L " + intervalT2.getText().toLowerCase() + " ";
             if (!txtContent.contains(txtAdd)) {
                 intervalText1.append(txtAdd);
             }
@@ -7748,12 +7969,69 @@ if (selectedExpr == null || selectedExpr.isBlank()) {
         variantFilterTxtA.setText("");
         variantFilterTxtA.append("[SNPEFF]\n\n");
         variantFilterTxtA.append("!(ANN[*].EFFECT has 'intergenic_region') & !(ANN[*].EFFECT has 'intron_variant') & !(ANN[*].EFFECT has 'synonymous_variant') & (exists AF) & (AF[*] >= 0.01)\n");
-        
+
         variantFilterTxtA.append("[VEP]\n\n");
-      variantFilterTxtA.append("!(CSQ[*] =~ 'intergenic_region|intron_variant|synonymous_variant') && (exists AF) && (AF[*] >= 0.01)");
-  
+        variantFilterTxtA.append("!(CSQ[*] =~ 'intergenic_region|intron_variant|synonymous_variant') && (exists AF) && (AF[*] >= 0.01)");
+
 
     }//GEN-LAST:event_snpEffvepRadioActionPerformed
+
+    private void uploadIntervalfileRActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_uploadIntervalfileRActionPerformed
+        intervalBtn2.setEnabled(true);
+
+        intervalT2.setText("");
+        intervalText1.setText("");
+        add9.setEnabled(false);
+        del9.setEnabled(false);
+    }//GEN-LAST:event_uploadIntervalfileRActionPerformed
+
+    private void browseGenomadActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_browseGenomadActionPerformed
+       JFileChooser chooser = new JFileChooser();
+    chooser.setDialogTitle("Select gnomAD VCF File or Directory");
+    // Allows selecting either a single .vcf.gz file OR a folder containing per-chromosome VCFs
+    chooser.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
+    
+    int returnVal = chooser.showOpenDialog(this);
+    if (returnVal == JFileChooser.APPROVE_OPTION) {
+        gnomadVcf.setText(chooser.getSelectedFile().getAbsolutePath());
+    }
+    }//GEN-LAST:event_browseGenomadActionPerformed
+
+    private void browseDbsnpActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_browseDbsnpActionPerformed
+        JFileChooser chooser = new JFileChooser();
+    chooser.setDialogTitle("Select dbSNP VCF File");
+    chooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+    
+    // Restrict file selection to VCF files
+    javax.swing.filechooser.FileNameExtensionFilter vcfFilter = 
+        new javax.swing.filechooser.FileNameExtensionFilter("VCF Files (*.vcf, *.vcf.gz, *.gz)", "vcf", "gz");
+    chooser.setFileFilter(vcfFilter);
+    
+    int returnVal = chooser.showOpenDialog(this);
+    if (returnVal == JFileChooser.APPROVE_OPTION) {
+        dbsnpVCF.setText(chooser.getSelectedFile().getAbsolutePath());
+    }
+    }//GEN-LAST:event_browseDbsnpActionPerformed
+
+    private void browseClinvarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_browseClinvarActionPerformed
+      JFileChooser chooser = new JFileChooser();
+    chooser.setDialogTitle("Select ClinVar VCF File");
+    chooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+    
+    // Restrict file selection to VCF files
+    javax.swing.filechooser.FileNameExtensionFilter vcfFilter = 
+        new javax.swing.filechooser.FileNameExtensionFilter("VCF Files (*.vcf, *.vcf.gz, *.gz)", "vcf", "gz");
+    chooser.setFileFilter(vcfFilter);
+    
+    int returnVal = chooser.showOpenDialog(this);
+    if (returnVal == JFileChooser.APPROVE_OPTION) {
+        clinvarVCF.setText(chooser.getSelectedFile().getAbsolutePath());
+    }
+    }//GEN-LAST:event_browseClinvarActionPerformed
+
+    private void jCheckBox5ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jCheckBox5ActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_jCheckBox5ActionPerformed
 
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
@@ -7789,14 +8067,19 @@ if (selectedExpr == null || selectedExpr.isBlank()) {
     private javax.swing.JButton bamoutB;
     private javax.swing.JCheckBox bamoutCheck;
     private javax.swing.JTextField bamoutTxt;
+    private javax.swing.JButton browseClinvar;
+    private javax.swing.JButton browseDbsnp;
     private javax.swing.JButton browseGTFBtn2;
+    private javax.swing.JButton browseGenomad;
     private javax.swing.JCheckBox bwaM;
     private javax.swing.JPanel bwaPanel;
     private javax.swing.JPanel byBam;
     private javax.swing.JPanel byFastq;
+    private javax.swing.JTextField clinvarVCF;
     private javax.swing.JRadioButton createIntervalR;
     private javax.swing.JTextField crop;
     private javax.swing.JCheckBox cropC;
+    private javax.swing.JTextField dbsnpVCF;
     private javax.swing.JButton del1;
     private javax.swing.JButton del10;
     private javax.swing.JButton del2;
@@ -7827,12 +8110,12 @@ if (selectedExpr == null || selectedExpr.isBlank()) {
     private javax.swing.JTextField filterNameB;
     private javax.swing.JCheckBox g1Check;
     private javax.swing.JCheckBox generatePON;
-    private javax.swing.JPanel genomicDBPanel;
     private javax.swing.JCheckBox germline;
     private javax.swing.JCheckBox germlineCheck;
     private javax.swing.JPanel germlinePanel;
     private javax.swing.JButton germlineResBtn;
     private javax.swing.JTextField germlineResTxt;
+    private javax.swing.JTextField gnomadVcf;
     private javax.swing.ButtonGroup haploIntervalBG;
     private javax.swing.ButtonGroup haplotypeGroup;
     private javax.swing.JTextField headcrop;
@@ -7846,6 +8129,7 @@ if (selectedExpr == null || selectedExpr.isBlank()) {
     private javax.swing.JButton intervalBtn1;
     private javax.swing.JButton intervalBtn2;
     private javax.swing.JCheckBox intervalCheck;
+    private javax.swing.JPanel intervalPanel;
     private javax.swing.JTextField intervalT;
     private javax.swing.JTextField intervalT1;
     private javax.swing.JTextField intervalT2;
@@ -7883,6 +8167,7 @@ if (selectedExpr == null || selectedExpr.isBlank()) {
     private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel20;
     private javax.swing.JLabel jLabel21;
+    private javax.swing.JLabel jLabel22;
     private javax.swing.JLabel jLabel23;
     private javax.swing.JLabel jLabel24;
     private javax.swing.JLabel jLabel25;
@@ -7955,6 +8240,10 @@ if (selectedExpr == null || selectedExpr.isBlank()) {
     private javax.swing.JScrollPane jScrollPane7;
     private javax.swing.JScrollPane jScrollPane8;
     private javax.swing.JScrollPane jScrollPane9;
+    private javax.swing.JSeparator jSeparator1;
+    private javax.swing.JSeparator jSeparator2;
+    private javax.swing.JSeparator jSeparator3;
+    private javax.swing.JSeparator jSeparator4;
     private javax.swing.JTree jTree1;
     private javax.swing.JRadioButton jointModeH;
     private javax.swing.JButton knownSNPBtn;
@@ -8008,6 +8297,13 @@ if (selectedExpr == null || selectedExpr.isBlank()) {
     private javax.swing.JRadioButton snpEffvepRadio;
     private javax.swing.JComboBox<String> snpSiftCombobox;
     private javax.swing.JCheckBox somatic;
+    private javax.swing.JLabel somaticWarning2;
+    private javax.swing.JLabel somaticWarning3;
+    private javax.swing.JLabel somaticWarning4;
+    private javax.swing.JLabel somaticWarning5;
+    private javax.swing.JLabel somaticWarning6;
+    private javax.swing.JLabel somaticWarning7;
+    private javax.swing.JLabel somaticWarningLabel;
     private javax.swing.JCheckBox splitNcigar;
     private javax.swing.JTextField thread;
     private javax.swing.JTextField thread1;

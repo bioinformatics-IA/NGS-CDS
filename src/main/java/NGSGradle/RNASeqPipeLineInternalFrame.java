@@ -70,6 +70,7 @@ import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import java.lang.reflect.Type;
+import java.util.LinkedHashSet;
 
 /**
  *
@@ -6972,11 +6973,23 @@ listModelreadPair2.addElement("\"/media/nigab/sda1/Iffat/CL_fastq/SRR21164510_2.
 
     private void singleFactorRadioActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_singleFactorRadioActionPerformed
         complexDesignPanel.setVisible(false);
+        
+         // 1. Reset combo box back to default option (Index 0)
+        edgeRTestCombo.setSelectedIndex(0);
+
+        // 2. Clear edgeRTestList and update it based on newly selected radio button
+        updateTestListForSelection();
 
     }//GEN-LAST:event_singleFactorRadioActionPerformed
 
     private void multiFactorRadioActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_multiFactorRadioActionPerformed
         complexDesignPanel.setVisible(true);
+        
+         // 1. Reset combo box back to default option (Index 0)
+        edgeRTestCombo.setSelectedIndex(0);
+
+        // 2. Clear edgeRTestList and update it based on newly selected radio button
+        updateTestListForSelection();
 
     }//GEN-LAST:event_multiFactorRadioActionPerformed
 
@@ -7124,60 +7137,121 @@ listModelreadPair2.addElement("\"/media/nigab/sda1/Iffat/CL_fastq/SRR21164510_2.
     }//GEN-LAST:event_jButton25ActionPerformed
 
     private void edgeRTestComboItemStateChanged(java.awt.event.ItemEvent evt) {//GEN-FIRST:event_edgeRTestComboItemStateChanged
+//
+//        edgeRTestList.setEnabled(true);
+//        contrastValue.setEnabled(false);
+//
+//        if (edgeRTestCombo.getSelectedIndex() == 0) {
+//            testInfoLabel.setText("");
+//            testInfoLabel1.setText("");
+//            testInfoLabel2.setText("");
+//            selectInfoLabel.setText("Select any test type");
+//
+//            edgeRTestList.setEnabled(false);
+//        } else if (edgeRTestCombo.getSelectedIndex() == 1) {//exactTest
+//            selectInfoLabel.setText("Must select two coefficents & set PValue, LogFC");
+//
+//            testInfoLabel.setText("Simple Two-Group Comparison");
+//            testInfoLabel1.setText("");
+//            testInfoLabel2.setText("");
+//        } else if (edgeRTestCombo.getSelectedIndex() == 2) {//glmQLFTest (coef)
+//
+//            selectInfoLabel.setText("Select either one or two coefficents.");
+//
+//            testInfoLabel.setText("Quasi-Likelihood F-Test for Complex Design with coefficents");
+//            testInfoLabel1.setText("Tests whether 1+ coefficients are significantly different from 0.");
+//            testInfoLabel2.setText("Use this only if your design includes an intercept (e.g., ~group). Not recommended for groups comparison");
+//
+//        } else if (edgeRTestCombo.getSelectedIndex() == 3) {//glmQLFTest (contrast)
+//
+//            selectInfoLabel.setText("Set contrast vector using +1 (include), -1 (subtract), 0 (ignore) for each group column.");
+//            testInfoLabel.setText("Quasi-Likelihood F-Test for Complex Design with contrast");
+//            testInfoLabel1.setText("");
+//            testInfoLabel2.setText("");
+//            contrastValue.setEnabled(true);
+//
+//        } else if (edgeRTestCombo.getSelectedIndex() == 4) {//glmLRT(coef)
+//
+//            testInfoLabel.setText("Likelihood Ratio Test for Complex Design with coefficents");
+//            testInfoLabel1.setText("");
+//            testInfoLabel2.setText("");
+//            selectInfoLabel.setText("Select either one or two coefficents");
+//
+//            testInfoLabel1.setText("Tests whether 1+ model coefficients are significantly different from 0");
+//
+//        } else if (edgeRTestCombo.getSelectedIndex() == 5) {//glmLRT(contrast)
+//            testInfoLabel.setText("Likelihood Ratio Test for Complex Design with contrast");
+//            testInfoLabel1.setText("");
+//            testInfoLabel2.setText("");
+//            selectInfoLabel.setText("Set contrast vector using +1 (include), -1 (subtract), 0 (ignore) for each group column.");
+//            contrastValue.setEnabled(true);
+//
+//        } else if (edgeRTestCombo.getSelectedIndex() == 6) {//glmTreat
+//            testInfoLabel.setText("Minimum Fold-Change Testing");
+//            testInfoLabel1.setText("");
+//            testInfoLabel2.setText("");
+//            selectInfoLabel.setText("Must select one coefficent & set LogFC");
+//        }
+if (evt.getStateChange() == java.awt.event.ItemEvent.SELECTED) {
+            int index = edgeRTestCombo.getSelectedIndex();
 
-        edgeRTestList.setEnabled(true);
-        contrastValue.setEnabled(false);
+            if (index == 0) {
+                testInfoLabel.setText("");
+                testInfoLabel1.setText("");
+                testInfoLabel2.setText("");
+                selectInfoLabel.setText("Select any test type");
 
-        if (edgeRTestCombo.getSelectedIndex() == 0) {
-            testInfoLabel.setText("");
-            testInfoLabel1.setText("");
-            testInfoLabel2.setText("");
-            selectInfoLabel.setText("Select any test type");
+                edgeRTestList.setEnabled(false);
+                contrastValue.setEnabled(false);
 
-            edgeRTestList.setEnabled(false);
-        } else if (edgeRTestCombo.getSelectedIndex() == 1) {//exactTest
-            selectInfoLabel.setText("Must select two coefficents & set PValue, LogFC");
+            } else {
+                // User made a test selection — filter edgeRTestList per active Radio Button mode
+                updateTestListForSelection();
+                edgeRTestList.setEnabled(true);
 
-            testInfoLabel.setText("Simple Two-Group Comparison");
-            testInfoLabel1.setText("");
-            testInfoLabel2.setText("");
-        } else if (edgeRTestCombo.getSelectedIndex() == 2) {//glmQLFTest (coef)
+                if (index == 1) { // exactTest
+                    selectInfoLabel.setText("Must select two coefficients & set PValue, LogFC");
+                    testInfoLabel.setText("Simple Two-Group Comparison");
+                    testInfoLabel1.setText("");
+                    testInfoLabel2.setText("");
+                    contrastValue.setEnabled(false);
 
-            selectInfoLabel.setText("Select either one or two coefficents.");
+                } else if (index == 2) { // glmQLFTest (coef)
+                    selectInfoLabel.setText("Select either one or two coefficients.");
+                    testInfoLabel.setText("Quasi-Likelihood F-Test for Complex Design with coefficients");
+                    testInfoLabel1.setText("Tests whether 1+ coefficients are significantly different from 0.");
+                    testInfoLabel2.setText("Use this only if your design includes an intercept (e.g., ~group). Not recommended for groups comparison");
+                    contrastValue.setEnabled(false);
 
-            testInfoLabel.setText("Quasi-Likelihood F-Test for Complex Design with coefficents");
-            testInfoLabel1.setText("Tests whether 1+ coefficients are significantly different from 0.");
-            testInfoLabel2.setText("Use this only if your design includes an intercept (e.g., ~group). Not recommended for groups comparison");
+                } else if (index == 3) { // glmQLFTest (contrast)
+                    selectInfoLabel.setText("Set contrast vector using +1 (include), -1 (subtract), 0 (ignore) for each group column.");
+                    testInfoLabel.setText("Quasi-Likelihood F-Test for Complex Design with contrast");
+                    testInfoLabel1.setText("");
+                    testInfoLabel2.setText("");
+                    contrastValue.setEnabled(true);
 
-        } else if (edgeRTestCombo.getSelectedIndex() == 3) {//glmQLFTest (contrast)
+                } else if (index == 4) { // glmLRT (coef)
+                    testInfoLabel.setText("Likelihood Ratio Test for Complex Design with coefficients");
+                    testInfoLabel1.setText("Tests whether 1+ model coefficients are significantly different from 0");
+                    testInfoLabel2.setText("");
+                    selectInfoLabel.setText("Select either one or two coefficients");
+                    contrastValue.setEnabled(false);
 
-            selectInfoLabel.setText("Set contrast vector using +1 (include), -1 (subtract), 0 (ignore) for each group column.");
-            testInfoLabel.setText("Quasi-Likelihood F-Test for Complex Design with contrast");
-            testInfoLabel1.setText("");
-            testInfoLabel2.setText("");
-            contrastValue.setEnabled(true);
+                } else if (index == 5) { // glmLRT (contrast)
+                    testInfoLabel.setText("Likelihood Ratio Test for Complex Design with contrast");
+                    testInfoLabel1.setText("");
+                    testInfoLabel2.setText("");
+                    selectInfoLabel.setText("Set contrast vector using +1 (include), -1 (subtract), 0 (ignore) for each group column.");
+                    contrastValue.setEnabled(true);
 
-        } else if (edgeRTestCombo.getSelectedIndex() == 4) {//glmLRT(coef)
-
-            testInfoLabel.setText("Likelihood Ratio Test for Complex Design with coefficents");
-            testInfoLabel1.setText("");
-            testInfoLabel2.setText("");
-            selectInfoLabel.setText("Select either one or two coefficents");
-
-            testInfoLabel1.setText("Tests whether 1+ model coefficients are significantly different from 0");
-
-        } else if (edgeRTestCombo.getSelectedIndex() == 5) {//glmLRT(contrast)
-            testInfoLabel.setText("Likelihood Ratio Test for Complex Design with contrast");
-            testInfoLabel1.setText("");
-            testInfoLabel2.setText("");
-            selectInfoLabel.setText("Set contrast vector using +1 (include), -1 (subtract), 0 (ignore) for each group column.");
-            contrastValue.setEnabled(true);
-
-        } else if (edgeRTestCombo.getSelectedIndex() == 6) {//glmTreat
-            testInfoLabel.setText("Minimum Fold-Change Testing");
-            testInfoLabel1.setText("");
-            testInfoLabel2.setText("");
-            selectInfoLabel.setText("Must select one coefficent & set LogFC");
+                } else if (index == 6) { // glmTreat
+                    testInfoLabel.setText("Minimum Fold-Change Testing");
+                    testInfoLabel1.setText("");
+                    testInfoLabel2.setText("");
+                    selectInfoLabel.setText("Must select one coefficient & set LogFC");
+                    contrastValue.setEnabled(false);
+                }
+            }
         }
 
 
@@ -7413,33 +7487,58 @@ listModelreadPair2.addElement("\"/media/nigab/sda1/Iffat/CL_fastq/SRR21164510_2.
         model1.clear();
 
         TableModel model = sampleTable.getModel();
-        Set<String> uniqueCombinations = new HashSet<>();
-
-        if ((model.getColumnCount() == 2)) // || (singleFactorRadio.isSelected())
-        {
-
-            // Only one column for sampleGroups, so no concatenation
-            for (int row = 0; row < model.getRowCount(); row++) {
-                String value = model.getValueAt(row, 1).toString().toLowerCase();
-                uniqueCombinations.add(value);
-            }
-        } else {
-            // Multiple columns for sampleGroups, so concatenate values with a dot separator
-            for (int row = 0; row < model.getRowCount(); row++) {
-                StringBuilder combination = new StringBuilder();
-                for (int col = 1; col < model.getColumnCount(); col++) {
-                    combination.append(model.getValueAt(row, col).toString());
-                    if (col < model.getColumnCount() - 1) {
-                        combination.append(".");
-                    }
+        
+        int colCount = model.getColumnCount();
+    int rowCount = model.getRowCount();
+    // Preserve insertion order and eliminate duplicates
+        Set<String> uniqueCombinations = new LinkedHashSet<>();
+        
+        if (colCount <= 1) {
+        return; // Guard clause: Only SampleName column exists
+    }
+        // 1. Always collect individual levels for every factor column (Columns 1 to N)
+    for (int col = 1; col < colCount; col++) {
+        for (int row = 0; row < rowCount; row++) {
+            Object cellObj = model.getValueAt(row, col);
+            if (cellObj != null) {
+                String val = cellObj.toString().toLowerCase().trim();
+                if (!val.isEmpty()) {
+                    uniqueCombinations.add(val);
                 }
-                uniqueCombinations.add(combination.toString());
             }
         }
-        // Add each unique combination to model1
-        for (String colName : uniqueCombinations) {
-            model1.addElement(colName);
+    }
+    // 2. If table has 2 or more metadata columns, ALSO generate the dotted interaction tuples
+    if (colCount > 2) {
+        for (int row = 0; row < rowCount; row++) {
+            StringBuilder combinedGroup = new StringBuilder();
+            boolean validRow = true;
+
+            for (int col = 1; col < colCount; col++) {
+                Object cellObj = model.getValueAt(row, col);
+                String val = (cellObj != null) ? cellObj.toString().toLowerCase().trim() : "";
+                
+                if (val.isEmpty()) {
+                    validRow = false;
+                    break;
+                }
+
+                combinedGroup.append(val);
+                if (col < colCount - 1) {
+                    combinedGroup.append(".");
+                }
+            }
+
+            if (validRow && combinedGroup.length() > 0) {
+                uniqueCombinations.add(combinedGroup.toString());
+            }
         }
+    }
+    // Populate model1 (edgeRTestList) with all possible valid group targets
+    for (String groupName : uniqueCombinations) {
+        model1.addElement(groupName);
+    }
+
 
     }
 
@@ -7620,6 +7719,74 @@ listModelreadPair2.addElement("\"/media/nigab/sda1/Iffat/CL_fastq/SRR21164510_2.
         }
     }//GEN-LAST:event_tableLockBtnActionPerformed
 
+    public void updateTestListForSelection() {
+    model1.clear();
+
+    TableModel model = sampleTable.getModel();
+    int colCount = model.getColumnCount();
+    int rowCount = model.getRowCount();
+
+    if (colCount <= 1) {
+        return; // Guard clause
+    }
+
+    Set<String> targetGroups = new LinkedHashSet<>();
+
+    if (singleFactorRadio.isSelected()) {
+        // Mode 1: Single Factor — Collect individual levels from Column 1 only
+        for (int row = 0; row < rowCount; row++) {
+            Object cellObj = model.getValueAt(row, 1);
+            if (cellObj != null) {
+                String val = cellObj.toString().toLowerCase().trim();
+                if (!val.isEmpty()) {
+                    targetGroups.add(val);
+                }
+            }
+        }
+    } else {
+        // Mode 2: Multi Factor — Generate concatenated dotted tuples across all factor columns
+        for (int row = 0; row < rowCount; row++) {
+            StringBuilder groupKey = new StringBuilder();
+            boolean validRow = true;
+
+            for (int col = 1; col < colCount; col++) {
+                Object cellObj = model.getValueAt(row, col);
+                String val = (cellObj != null) ? cellObj.toString().toLowerCase().trim() : "";
+
+                if (val.isEmpty()) {
+                    validRow = false;
+                    break;
+                }
+
+                groupKey.append(val);
+                if (col < colCount - 1) {
+                    groupKey.append(".");
+                }
+            }
+
+            if (validRow && groupKey.length() > 0) {
+                targetGroups.add(groupKey.toString());
+            }
+        }
+    }
+
+    // Populate edgeRTestList model
+    for (String group : targetGroups) {
+        model1.addElement(group);
+    }
+
+    // Refresh contrastValue default string if applicable
+    StringBuilder defaultContrast = new StringBuilder();
+    for (int i = 0; i < model1.size(); i++) {
+        defaultContrast.append(model1.getElementAt(i)).append(":0");
+        if (i < model1.size() - 1) {
+            defaultContrast.append(",");
+        }
+    }
+    contrastValue.setText(defaultContrast.toString());
+}
+    
+    
     public void generateCombinations(List<String> columnNames, List<String> current, int index, int size, DefaultListModel<String> listModel) {
         if (current.size() == size) {
             // Join selected column names with ":" to create an interaction term

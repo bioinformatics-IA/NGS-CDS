@@ -142,7 +142,7 @@ public class DEGenesAnalysis extends javax.swing.JInternalFrame {
         expressionAnalysisBG.add(edgeRadio);
         expressionAnalysisBG.add(bothRadio);
 
-////////////////////
+        ////////////////////
 //SETTING ALL PANELS
 ////////////////////
         inputPanel.setVisible(true);
@@ -158,7 +158,7 @@ public class DEGenesAnalysis extends javax.swing.JInternalFrame {
 
         geneEnrichmentPanel.setVisible(false); //GSEA Panel
 
-//// END SETTING ALL PANELS
+        //// END SETTING ALL PANELS
         contrastFactorCombo.setEnabled(false);
 
         warningLabel.setText(null);
@@ -361,7 +361,8 @@ public class DEGenesAnalysis extends javax.swing.JInternalFrame {
             @Override
             protected void process(java.util.List<String> messages) {
                 for (String message : messages) {
-                    App.textArea.append(message + "\n");
+                    App.logMessage(output_Dir.getText(), message);
+                    //App.textArea.append(message + "\n");
                 }
 
             }
@@ -373,7 +374,7 @@ public class DEGenesAnalysis extends javax.swing.JInternalFrame {
                 App.bar.setIndeterminate(false);
                 if (!rcodeError) {
                     //Saving Combined.tsv samplenames col in sampletable row
-                    try ( BufferedReader br = new BufferedReader(new FileReader(output_Dir.getText().concat("CombinedCounts.tsv")))) {
+                    try (BufferedReader br = new BufferedReader(new FileReader(output_Dir.getText().concat("CombinedCounts.tsv")))) {
                         // Read the first line (header)
                         String headerLine = br.readLine();
                         List<String> columnNames = new ArrayList<>();
@@ -462,7 +463,8 @@ public class DEGenesAnalysis extends javax.swing.JInternalFrame {
             @Override
             protected void process(java.util.List<String> messages) {
                 for (String message : messages) {
-                    App.textArea.append(message + "\n");
+                    App.logMessage(output_Dir.getText(), message);
+                    //App.textArea.append(message + "\n");
                 }
 
             }
@@ -558,7 +560,6 @@ public class DEGenesAnalysis extends javax.swing.JInternalFrame {
                     cmdList.add(rFilePath); //R Script Path
                     cmdList.add(workDir);  //Working Directory 1
                     cmdList.add(rLib);//2
-                    
 
                     if (filteringCombo.getSelectedIndex() == 0) // None,   
                     {
@@ -579,18 +580,17 @@ public class DEGenesAnalysis extends javax.swing.JInternalFrame {
                         cmdList.add(countThresh1.getText()); //4
                     }
 
-                  
                     if (singleFactorRadio.isSelected()) { //6
                         cmdList.add("SINGLE");
                     } else if (multiFactorRadio.isSelected()) {
                         cmdList.add("MULTIPLE");
-                        
+
                         if (interactionTermCombo.getSelectedIndex() == 1) { //7,8
                             //YES
                             cmdList.add(interactionTermCombo.getSelectedItem().toString());//7 
                             cmdList.add(String.join(",", interactionList.getSelectedValuesList())); //8
-                           // cmdList.add("");//interaction2
-                        
+                            // cmdList.add("");//interaction2
+
                         } else if (interactionTermCombo.getSelectedIndex() == 0) {
                             //NO
                             cmdList.add(interactionTermCombo.getSelectedItem().toString());//7
@@ -661,7 +661,8 @@ public class DEGenesAnalysis extends javax.swing.JInternalFrame {
             @Override
             protected void process(java.util.List<String> messages) {
                 for (String message : messages) {
-                    App.textArea.append(message + "\n");
+                    App.logMessage(output_Dir.getText(), message);
+                    //App.textArea.append(message + "\n");
                 }
 
             }
@@ -746,8 +747,14 @@ public class DEGenesAnalysis extends javax.swing.JInternalFrame {
                                 publish("\r\n" + "To resolve this, please review the Cross Table of the Sample Data Frame.\r\n Ensure there are no 0 values for any conditions.\r\n If you find any 0 values, adjust the sample data so that all conditions have non-zero counts, allowing DESeq2 to perform the analysis correctly.");
                             }
 
+                            String errorDetails;
+                            while ((errorDetails = reader.readLine()) != null) {
+                                App.LOGGER.info("\r\n" + errorDetails);
+                                publish("\r\n" + errorDetails);
+                            }
                             break;
-                        }
+
+                        }//error if
 
                     }//while
 
@@ -774,7 +781,8 @@ public class DEGenesAnalysis extends javax.swing.JInternalFrame {
             @Override
             protected void process(java.util.List<String> messages) {
                 for (String message : messages) {
-                    App.textArea.append(message + "\n");
+                    App.logMessage(output_Dir.getText(), message);
+                    //App.textArea.append(message + "\n");
                 }
 
             }
@@ -883,7 +891,8 @@ public class DEGenesAnalysis extends javax.swing.JInternalFrame {
             @Override
             protected void process(java.util.List<String> messages) {
                 for (String message : messages) {
-                    App.textArea.append(message + "\n");
+                    App.logMessage(output_Dir.getText(), message);
+                    //App.textArea.append(message + "\n");
                 }
 
             }
@@ -920,37 +929,31 @@ public class DEGenesAnalysis extends javax.swing.JInternalFrame {
 
                     List<String> cmdList = new ArrayList<String>();
 
-
                     cmdList.add("Rscript");
                     cmdList.add(rFilePath); //R Script Path
                     cmdList.add(workDir);  //Working Directory 1
                     cmdList.add(rLib);//2
-                   
+
                     cmdList.add(jTextField22.getText());//pvalue3
-                    
+
                     cmdList.add(jTextField21.getText()); //logfc4
-                    
+
                     cmdList.add(edgeRTestCombo.getSelectedItem().toString());  //test type 5
-                    
-                    
+
                     if (interceptOption.getSelectedIndex() == 1) { //6
                         cmdList.add("YES");
                     } else {
                         cmdList.add("NO");
                     }
-                  
-                    
-                    
-                    
+
                     int index[] = edgeRTestList.getSelectedIndices();
                     List<String> coefValues = edgeRTestList.getSelectedValuesList();
-                   
 
                     if (edgeRTestCombo.getSelectedIndex() == 1)//exact
                     {
                         cmdList.add(coefValues.get(0));//7
                         cmdList.add(coefValues.get(1));//8
-  
+
                     } else if ((edgeRTestCombo.getSelectedIndex() == 2)
                             || (edgeRTestCombo.getSelectedIndex() == 4)
                             || (edgeRTestCombo.getSelectedIndex() == 6))//glm coef,lrt
@@ -960,7 +963,7 @@ public class DEGenesAnalysis extends javax.swing.JInternalFrame {
 
                             cmdList.add(coefValues.get(0));//7
                             cmdList.add("");//8
-                            
+
                         } else if (index.length == 2) {
 
                             cmdList.add(coefValues.get(0));//7
@@ -971,9 +974,8 @@ public class DEGenesAnalysis extends javax.swing.JInternalFrame {
                     {
 
                         cmdList.add(contrastValue.getText());//7
-                           
-                            cmdList.add("");//8
-                        
+
+                        cmdList.add("");//8
 
                     }
 
@@ -1029,7 +1031,8 @@ public class DEGenesAnalysis extends javax.swing.JInternalFrame {
             @Override
             protected void process(java.util.List<String> messages) {
                 for (String message : messages) {
-                    App.textArea.append(message + "\n");
+                    App.logMessage(output_Dir.getText(), message);
+                    //   App.textArea.append(message + "\n");
                 }
 
             }
@@ -1098,10 +1101,10 @@ public class DEGenesAnalysis extends javax.swing.JInternalFrame {
                         cmdList.add("deSeq2");//24
                     } else if (analysis.equals("edgeR")) {
                         cmdList.add("edgeR");
-                  //      cmdList.add(edgerFileTxt.getText());//25
+                        //      cmdList.add(edgerFileTxt.getText());//25
                     } else if (analysis.equals("both")) {
                         cmdList.add("both");//24
-                  //      cmdList.add(edgerFileTxt.getText());//25
+                        //      cmdList.add(edgerFileTxt.getText());//25
                     }
 
                     ProcessBuilder pb = new ProcessBuilder(cmdList);
@@ -1143,7 +1146,8 @@ public class DEGenesAnalysis extends javax.swing.JInternalFrame {
             @Override
             protected void process(java.util.List<String> messages) {
                 for (String message : messages) {
-                    App.textArea.append(message + "\n");
+                    App.logMessage(output_Dir.getText(), message);
+                    //App.textArea.append(message + "\n");
                 }
 
             }
@@ -1196,7 +1200,6 @@ public class DEGenesAnalysis extends javax.swing.JInternalFrame {
                     pb.redirectErrorStream(true);
                     p = pb.start();
 
-                    
                     BufferedReader reader = new BufferedReader(new InputStreamReader(p.getInputStream()));
                     String line;
                     while ((line = reader.readLine()) != null) {
@@ -1204,12 +1207,10 @@ public class DEGenesAnalysis extends javax.swing.JInternalFrame {
                         publish("\r\n" + line);
                     }//while
 
-    //                Thread.sleep(5000); // 5 seconds
-
+                    //                Thread.sleep(5000); // 5 seconds
                     // Open browser to view the Shiny app
-      //              URI uri = new URI("http://127.0.0.1:8080");
-        //            Desktop.getDesktop().browse(uri);
-
+                    //              URI uri = new URI("http://127.0.0.1:8080");
+                    //            Desktop.getDesktop().browse(uri);
                     //////////////////////////////////////
                     if (!isCancelled()) {
                         status = p.waitFor();
@@ -1231,7 +1232,8 @@ public class DEGenesAnalysis extends javax.swing.JInternalFrame {
             @Override
             protected void process(java.util.List<String> messages) {
                 for (String message : messages) {
-                    App.textArea.append(message + "\n");
+                    App.logMessage(output_Dir.getText(), message);
+                    //App.textArea.append(message + "\n");
                 }
 
             }
@@ -1278,7 +1280,7 @@ public class DEGenesAnalysis extends javax.swing.JInternalFrame {
 
     // Save table data to CSV file, overwriting if file already exists
     public void saveTableToTSV(String filePath) {
-        try ( FileWriter csvWriter = new FileWriter(filePath, false)) { // 'false' ensures overwrite mode
+        try (FileWriter csvWriter = new FileWriter(filePath, false)) { // 'false' ensures overwrite mode
             // Write column headers
             for (int i = 0; i < sampleTableModel.getColumnCount(); i++) {
                 if (i == sampleTableModel.getColumnCount() - 1) //Last Column
@@ -1297,8 +1299,8 @@ public class DEGenesAnalysis extends javax.swing.JInternalFrame {
                 for (int j = 0; j < sampleTableModel.getColumnCount(); j++) {
                     Object cellValue = sampleTableModel.getValueAt(i, j);
                     String value = (cellValue != null ? cellValue.toString().trim() : "");
-                     value = value.replaceAll("\\s+", ".");
-                     
+                    value = value.replaceAll("\\s+", ".");
+
                     if (j == count) {
                         csvWriter.append(value);
                     } else {
@@ -1367,32 +1369,154 @@ public class DEGenesAnalysis extends javax.swing.JInternalFrame {
         model1.clear();
 
         TableModel model = sampleTable.getModel();
-        Set<String> uniqueCombinations = new HashSet<>();
 
-        if ((model.getColumnCount() == 2) || (singleFactorRadio.isSelected())) {
-            // Only one column for sampleGroups, so no concatenation
-            for (int row = 0; row < model.getRowCount(); row++) {
-                String value = model.getValueAt(row, 1).toString().toLowerCase();
-                uniqueCombinations.add(value);
-            }
-        } else {
-            // Multiple columns for sampleGroups, so concatenate values with a dot separator
-            for (int row = 0; row < model.getRowCount(); row++) {
-                StringBuilder combination = new StringBuilder();
-                for (int col = 1; col < model.getColumnCount(); col++) {
-                    combination.append(model.getValueAt(row, col).toString());
-                    if (col < model.getColumnCount() - 1) {
-                        combination.append(".");
+        int colCount = model.getColumnCount();
+        int rowCount = model.getRowCount();
+        // Preserve insertion order and eliminate duplicates
+        Set<String> uniqueCombinations = new LinkedHashSet<>();
+
+        if (colCount <= 1) {
+            return; // Guard clause: Only SampleName column exists
+        }
+        // 1. Always collect individual levels for every factor column (Columns 1 to N)
+        for (int col = 1; col < colCount; col++) {
+            for (int row = 0; row < rowCount; row++) {
+                Object cellObj = model.getValueAt(row, col);
+                if (cellObj != null) {
+                    String val = cellObj.toString().toLowerCase().trim();
+                    if (!val.isEmpty()) {
+                        uniqueCombinations.add(val);
                     }
                 }
-                uniqueCombinations.add(combination.toString());
             }
         }
-        // Add each unique combination to model1
-        for (String colName : uniqueCombinations) {
-            model1.addElement(colName);
+        // 2. If table has 2 or more metadata columns, ALSO generate the dotted interaction tuples
+        if (colCount > 2) {
+            for (int row = 0; row < rowCount; row++) {
+                StringBuilder combinedGroup = new StringBuilder();
+                boolean validRow = true;
+
+                for (int col = 1; col < colCount; col++) {
+                    Object cellObj = model.getValueAt(row, col);
+                    String val = (cellObj != null) ? cellObj.toString().toLowerCase().trim() : "";
+
+                    if (val.isEmpty()) {
+                        validRow = false;
+                        break;
+                    }
+
+                    combinedGroup.append(val);
+                    if (col < colCount - 1) {
+                        combinedGroup.append(".");
+                    }
+                }
+
+                if (validRow && combinedGroup.length() > 0) {
+                    uniqueCombinations.add(combinedGroup.toString());
+                }
+            }
+        }
+        // Populate model1 (edgeRTestList) with all possible valid group targets
+        for (String groupName : uniqueCombinations) {
+            model1.addElement(groupName);
+        }
+//        
+//        for (int row = 0; row < model.getRowCount(); row++) {
+//            StringBuilder combination = new StringBuilder();
+//
+//            if ((model.getColumnCount() == 2) || (singleFactorRadio.isSelected())) {
+//                // Only one column for sampleGroups, so no concatenation
+//                String value = model.getValueAt(row, 1).toString().toLowerCase().trim();
+//                uniqueCombinations.add(value);
+//
+//            } else {
+//                // Multiple columns for sampleGroups, so concatenate values with a dot separator
+//
+//                for (int col = 1; col < model.getColumnCount(); col++) {
+//                    Object cellObj = model.getValueAt(row, col);
+//                    String val = (cellObj != null) ? cellObj.toString().toLowerCase().trim() : "";
+//
+//                    combination.append(val);
+//                    if (col < model.getColumnCount() - 1) {
+//                        combination.append(".");
+//                    }
+//                }
+//                uniqueCombinations.add(combination.toString());
+//
+//            }
+//        }//end for
+//        // Add each unique combination to model1
+//        for (String colName : uniqueCombinations) {
+//            model1.addElement(colName);
+//        }
+
+    }
+
+    public void updateTestListForSelection() {
+        model1.clear();
+
+        TableModel model = sampleTable.getModel();
+        int colCount = model.getColumnCount();
+        int rowCount = model.getRowCount();
+
+        if (colCount <= 1) {
+            return; // Guard clause
         }
 
+        Set<String> targetGroups = new LinkedHashSet<>();
+
+        if (singleFactorRadio.isSelected()) {
+            // Mode 1: Single Factor — Collect individual levels from Column 1 only
+            for (int row = 0; row < rowCount; row++) {
+                Object cellObj = model.getValueAt(row, 1);
+                if (cellObj != null) {
+                    String val = cellObj.toString().toLowerCase().trim();
+                    if (!val.isEmpty()) {
+                        targetGroups.add(val);
+                    }
+                }
+            }
+        } else {
+            // Mode 2: Multi Factor — Generate concatenated dotted tuples across all factor columns
+            for (int row = 0; row < rowCount; row++) {
+                StringBuilder groupKey = new StringBuilder();
+                boolean validRow = true;
+
+                for (int col = 1; col < colCount; col++) {
+                    Object cellObj = model.getValueAt(row, col);
+                    String val = (cellObj != null) ? cellObj.toString().toLowerCase().trim() : "";
+
+                    if (val.isEmpty()) {
+                        validRow = false;
+                        break;
+                    }
+
+                    groupKey.append(val);
+                    if (col < colCount - 1) {
+                        groupKey.append(".");
+                    }
+                }
+
+                if (validRow && groupKey.length() > 0) {
+                    targetGroups.add(groupKey.toString());
+                }
+            }
+        }
+
+        // Populate edgeRTestList model
+        for (String group : targetGroups) {
+            model1.addElement(group);
+        }
+
+        // Refresh contrastValue default string if applicable
+        StringBuilder defaultContrast = new StringBuilder();
+        for (int i = 0; i < model1.size(); i++) {
+            defaultContrast.append(model1.getElementAt(i)).append(":0");
+            if (i < model1.size() - 1) {
+                defaultContrast.append(",");
+            }
+        }
+        contrastValue.setText(defaultContrast.toString());
     }
 
     // Recursive method to generate combinations of interaction terms
@@ -1450,7 +1574,7 @@ public class DEGenesAnalysis extends javax.swing.JInternalFrame {
      * This method is called from within the constructor to initialize the form.
      * WARNING: Do NOT modify this code. The content of this method is always
      * regenerated by the Form Editor.
-                                                                                                                                                                                                                                                      */
+     */
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
@@ -3243,7 +3367,6 @@ public class DEGenesAnalysis extends javax.swing.JInternalFrame {
             if (checkInput()) {
                 inputPanel.setVisible(false);
 
-
 //Prepare Counts and extract SampleNames
                 runRCOUNT(System.getProperty("user.dir").concat("/bin/onlyCounts.R"), output_Dir.getText(), System.getProperty("user.dir").concat("/R_Libraries"));
                 downPanel.setVisible(true);
@@ -3274,10 +3397,22 @@ public class DEGenesAnalysis extends javax.swing.JInternalFrame {
     private void singleFactorRadioActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_singleFactorRadioActionPerformed
         complexDesignPanel.setVisible(false);
 
+        // 1. Reset combo box back to default option (Index 0)
+        edgeRTestCombo.setSelectedIndex(0);
+
+        // 2. Clear edgeRTestList and update it based on newly selected radio button
+        updateTestListForSelection();
+
     }//GEN-LAST:event_singleFactorRadioActionPerformed
 
     private void multiFactorRadioActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_multiFactorRadioActionPerformed
         complexDesignPanel.setVisible(true);
+
+        // 1. Reset combo box back to default option (Index 0)
+        edgeRTestCombo.setSelectedIndex(0);
+
+        // 2. Clear edgeRTestList and update it based on newly selected radio button
+        updateTestListForSelection();
 
     }//GEN-LAST:event_multiFactorRadioActionPerformed
 
@@ -3403,8 +3538,8 @@ public class DEGenesAnalysis extends javax.swing.JInternalFrame {
 
         } else if ((edgeRTestCombo.getSelectedIndex() == 3) || (edgeRTestCombo.getSelectedIndex() == 5)) { //contrast
             // Regular expression for a comma-separated list of number
-          //  String pattern = "^[-]?\\\\d+(\\\\.\\\\d+)?(,[-]?\\\\d+(\\\\.\\\\d+)?)*$";
-           String pattern = "^([a-zA-Z_][a-zA-Z0-9_]*:-?\\d+(\\.\\d+)?)(,\\s*[a-zA-Z_][a-zA-Z0-9_]*:-?\\d+(\\.\\d+)?)*$";
+            //  String pattern = "^[-]?\\\\d+(\\\\.\\\\d+)?(,[-]?\\\\d+(\\\\.\\\\d+)?)*$";
+            String pattern = "^([a-zA-Z_][a-zA-Z0-9_]*:-?\\d+(\\.\\d+)?)(,\\s*[a-zA-Z_][a-zA-Z0-9_]*:-?\\d+(\\.\\d+)?)*$";
 
             if (contrastValue.getText().isEmpty()) {
                 warningLabel.setText("**ERROR: Fill all fields");
@@ -3420,64 +3555,71 @@ public class DEGenesAnalysis extends javax.swing.JInternalFrame {
 
         }
 
-//        runEdgeResults(System.getProperty("user.dir").concat("/bin/edgeRResults.R"), output_Dir.getText(), System.getProperty("user.dir").concat("/R_Libraries"));
     }//GEN-LAST:event_jButton25ActionPerformed
 
     private void edgeRTestComboItemStateChanged(java.awt.event.ItemEvent evt) {//GEN-FIRST:event_edgeRTestComboItemStateChanged
-        edgeRTestList.setEnabled(true);
-           contrastValue.setEnabled(false);
-        
-        if (edgeRTestCombo.getSelectedIndex() == 0) {
-            testInfoLabel.setText("");
-            testInfoLabel1.setText("");
-            testInfoLabel2.setText("");
-            selectInfoLabel.setText("Select any test type");
+        if (evt.getStateChange() == java.awt.event.ItemEvent.SELECTED) {
+            int index = edgeRTestCombo.getSelectedIndex();
 
-            edgeRTestList.setEnabled(false);
-        } else if (edgeRTestCombo.getSelectedIndex() == 1) {//exactTest
-            selectInfoLabel.setText("Must select two coefficents & set PValue, LogFC");
+            if (index == 0) {
+                testInfoLabel.setText("");
+                testInfoLabel1.setText("");
+                testInfoLabel2.setText("");
+                selectInfoLabel.setText("Select any test type");
 
-            testInfoLabel.setText("Simple Two-Group Comparison");
-            testInfoLabel1.setText("");
-            testInfoLabel2.setText("");
-        } else if (edgeRTestCombo.getSelectedIndex() == 2) {//glmQLFTest (coef)
+                edgeRTestList.setEnabled(false);
+                contrastValue.setEnabled(false);
 
-            selectInfoLabel.setText("Select either one or two coefficents.");
+            } else {
+                // User made a test selection — filter edgeRTestList per active Radio Button mode
+                updateTestListForSelection();
+                edgeRTestList.setEnabled(true);
 
-            testInfoLabel.setText("Quasi-Likelihood F-Test for Complex Design with coefficents");
-            testInfoLabel1.setText("Tests whether 1+ coefficients are significantly different from 0.");
-            testInfoLabel2.setText("Use this only if your design includes an intercept (e.g., ~group). Not recommended for groups comparison");
+                if (index == 1) { // exactTest
+                    selectInfoLabel.setText("Must select two coefficients & set PValue, LogFC");
+                    testInfoLabel.setText("Simple Two-Group Comparison");
+                    testInfoLabel1.setText("");
+                    testInfoLabel2.setText("");
+                    contrastValue.setEnabled(false);
 
-        } else if (edgeRTestCombo.getSelectedIndex() == 3) {//glmQLFTest (contrast)
+                } else if (index == 2) { // glmQLFTest (coef)
+                    selectInfoLabel.setText("Select either one or two coefficients.");
+                    testInfoLabel.setText("Quasi-Likelihood F-Test for Complex Design with coefficients");
+                    testInfoLabel1.setText("Tests whether 1+ coefficients are significantly different from 0.");
+                    testInfoLabel2.setText("Use this only if your design includes an intercept (e.g., ~group). Not recommended for groups comparison");
+                    contrastValue.setEnabled(false);
 
-            selectInfoLabel.setText("Set contrast vector using +1 (include), -1 (subtract), 0 (ignore) for each group column.");
-            testInfoLabel.setText("Quasi-Likelihood F-Test for Complex Design with contrast");
-            testInfoLabel1.setText("");
-            testInfoLabel2.setText("");
-    contrastValue.setEnabled(true);
-        
-        } else if (edgeRTestCombo.getSelectedIndex() == 4) {//glmLRT(coef)
+                } else if (index == 3) { // glmQLFTest (contrast)
+                    selectInfoLabel.setText("Set contrast vector using +1 (include), -1 (subtract), 0 (ignore) for each group column.");
+                    testInfoLabel.setText("Quasi-Likelihood F-Test for Complex Design with contrast");
+                    testInfoLabel1.setText("");
+                    testInfoLabel2.setText("");
+                    contrastValue.setEnabled(true);
 
-            testInfoLabel.setText("Likelihood Ratio Test for Complex Design with coefficents");
-            testInfoLabel1.setText("");
-            testInfoLabel2.setText("");
-            selectInfoLabel.setText("Select either one or two coefficents");
+                } else if (index == 4) { // glmLRT (coef)
+                    testInfoLabel.setText("Likelihood Ratio Test for Complex Design with coefficients");
+                    testInfoLabel1.setText("Tests whether 1+ model coefficients are significantly different from 0");
+                    testInfoLabel2.setText("");
+                    selectInfoLabel.setText("Select either one or two coefficients");
+                    contrastValue.setEnabled(false);
 
-            testInfoLabel1.setText("Tests whether 1+ model coefficients are significantly different from 0");
+                } else if (index == 5) { // glmLRT (contrast)
+                    testInfoLabel.setText("Likelihood Ratio Test for Complex Design with contrast");
+                    testInfoLabel1.setText("");
+                    testInfoLabel2.setText("");
+                    selectInfoLabel.setText("Set contrast vector using +1 (include), -1 (subtract), 0 (ignore) for each group column.");
+                    contrastValue.setEnabled(true);
 
-        } else if (edgeRTestCombo.getSelectedIndex() == 5) {//glmLRT(contrast)
-            testInfoLabel.setText("Likelihood Ratio Test for Complex Design with contrast");
-            testInfoLabel1.setText("");
-            testInfoLabel2.setText("");
-            selectInfoLabel.setText("Set contrast vector using +1 (include), -1 (subtract), 0 (ignore) for each group column.");
-    contrastValue.setEnabled(true);
-        
-        } else if (edgeRTestCombo.getSelectedIndex() == 6) {//glmTreat
-            testInfoLabel.setText("Minimum Fold-Change Testing");
-            testInfoLabel1.setText("");
-            testInfoLabel2.setText("");
-            selectInfoLabel.setText("Must select one coefficent & set LogFC");
+                } else if (index == 6) { // glmTreat
+                    testInfoLabel.setText("Minimum Fold-Change Testing");
+                    testInfoLabel1.setText("");
+                    testInfoLabel2.setText("");
+                    selectInfoLabel.setText("Must select one coefficient & set LogFC");
+                    contrastValue.setEnabled(false);
+                }
+            }
         }
+
 
     }//GEN-LAST:event_edgeRTestComboItemStateChanged
 
@@ -3562,9 +3704,9 @@ public class DEGenesAnalysis extends javax.swing.JInternalFrame {
 
     private void edgeRTestListValueChanged(javax.swing.event.ListSelectionEvent evt) {//GEN-FIRST:event_edgeRTestListValueChanged
 
-        if (interceptOption.getSelectedIndex() == 0 && edgeRTestList.getSelectedIndex() == 0 && edgeRTestCombo.getSelectedIndex() != 1 ) {
+        if (interceptOption.getSelectedIndex() == 0 && edgeRTestList.getSelectedIndex() == 0 && edgeRTestCombo.getSelectedIndex() != 1) {
             JOptionPane.showMessageDialog(this, "As there is no intercept to be used as reference so 1st column couldn't be selected.1st column will be used as reference in coef");
-           // edgeRTestList.clearSelection();
+            // edgeRTestList.clearSelection();
         }
 
     }//GEN-LAST:event_edgeRTestListValueChanged
@@ -3609,17 +3751,9 @@ public class DEGenesAnalysis extends javax.swing.JInternalFrame {
                 // Retrieve column names in 'factors'
                 List<String> factors = new ArrayList<>();
 
-                if (singleFactorRadio.isSelected()) {
-                    // Use only the first factor column (usually "CONDITION")
-                    if (columnCount > 1) {
-                        String columnName = sampleTable.getColumnName(1); // assuming CONDITION is at index 1
-                        factors.add(columnName);
-                    }
-                } else {
-                    for (int i = 1; i < columnCount; i++) {  // Skip the first column
-                        String columnName = sampleTable.getColumnName(i);
-                        factors.add(columnName);
-                    }
+                for (int i = 1; i < columnCount; i++) {  // Skip the first column
+                    String columnName = sampleTable.getColumnName(i);
+                    factors.add(columnName);
                 }
 
                 deFactorListModel.clear();
@@ -3638,21 +3772,45 @@ public class DEGenesAnalysis extends javax.swing.JInternalFrame {
 
                 //Start adding intercepts
                 deFactorListModel.addElement("Intercept");
-
-                // 2. Generate main effect combinations
+//This is the Old code
+//                // 2. Generate main effect combinations
+//                for (Map.Entry<String, Set<String>> entry : factorLevels.entrySet()) {
+//                    List<String> levels = new ArrayList<>(entry.getValue());
+//                    if (levels.size() > 1) {
+//                        String base = levels.get(0);
+//                        for (int i = 1; i < levels.size(); i++) {
+//
+//                            deFactorListModel.addElement(entry.getKey() + "_" + levels.get(i) + "_vs_" + base);
+//                        }
+//
+//                        // deFactorListModel.addElement(entry.getKey() + "_" + levels.get(1) + "_vs_" + levels.get(0));
+//                    }
+//                }
+//This is new ..
+// 2. Generate main effect combinations (Updated with makeRName and full pairwise support)
                 for (Map.Entry<String, Set<String>> entry : factorLevels.entrySet()) {
-                    List<String> levels = new ArrayList<>(entry.getValue());
+                    String factorName = makeRName(entry.getKey());
+                    List<String> rawLevels = new ArrayList<>(entry.getValue());
+
+                    // Sanitize levels
+                    List<String> levels = new ArrayList<>();
+                    for (String l : rawLevels) {
+                        levels.add(makeRName(l));
+                    }
+
                     if (levels.size() > 1) {
-                        String base = levels.get(0);
-                        for (int i = 1; i < levels.size(); i++) {
-
-                            deFactorListModel.addElement(entry.getKey() + "_" + levels.get(i) + "_vs_" + base);
+                        // Generate all pairwise non-self comparisons (Level_i vs Level_j)
+                        for (int i = 0; i < levels.size(); i++) {
+                            for (int j = 0; j < levels.size(); j++) {
+                                if (i != j) {
+                                    deFactorListModel.addElement(factorName + "_" + levels.get(i) + "_vs_" + levels.get(j));
+                                }
+                            }
                         }
-
-                        // deFactorListModel.addElement(entry.getKey() + "_" + levels.get(1) + "_vs_" + levels.get(0));
                     }
                 }
 
+//End new
                 // 3. Generate interaction terms
                 List<String> factorsT = new ArrayList<>(factorLevels.keySet());
                 if (factorsT.size() > 1) {
@@ -3661,23 +3819,21 @@ public class DEGenesAnalysis extends javax.swing.JInternalFrame {
                 }
 //Adding edgeR result design list
                 predictColumnNames();
-                
-                          ////
-            DefaultListModel<String> model1 = (DefaultListModel<String>) edgeRTestList.getModel();
-StringBuilder defaultContrast = new StringBuilder();
 
-for (int i = 0; i < model1.size(); i++) {
-    String group = model1.getElementAt(i);
-    defaultContrast.append(group).append(":0");
-    if (i < model1.size() - 1) {
-        defaultContrast.append(",");
-    }
-}
+                ////
+            DefaultListModel<String> model1 = (DefaultListModel<String>) edgeRTestList.getModel();
+                StringBuilder defaultContrast = new StringBuilder();
+
+                for (int i = 0; i < model1.size(); i++) {
+                    String group = model1.getElementAt(i);
+                    defaultContrast.append(group).append(":0");
+                    if (i < model1.size() - 1) {
+                        defaultContrast.append(",");
+                    }
+                }
 
 // Set the generated string into your contrast text field
-contrastValue.setText(defaultContrast.toString());
-
-    
+                contrastValue.setText(defaultContrast.toString());
 
                 //Panels Settings
                 analysisModePanel.setVisible(true);
@@ -3716,12 +3872,24 @@ contrastValue.setText(defaultContrast.toString());
                 resEDPanel.setVisible(false);
             }
 
-            
-          
-            
         }//IF LOCK SELECTED
 
     }//GEN-LAST:event_tableLockBtnActionPerformed
+
+// Helper method to sanitize strings similarly to R's make.names()
+    private String makeRName(String name) {
+        if (name == null || name.isEmpty()) {
+            return "";
+        }
+        // Replace non-alphanumeric characters (except underscores) with dots
+        String clean = name.replaceAll("[^a-zA-Z0-9_]", ".");
+        // If it starts with a digit or dot followed by digit, prepend 'X'
+        if (clean.matches("^[0-9.].*")) {
+            clean = "X" + clean;
+        }
+        return clean;
+    }
+
     public boolean hasEmptyCells(JTable table) {
         TableModel model = table.getModel();
         int rowCount = model.getRowCount();

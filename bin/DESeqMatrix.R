@@ -33,7 +33,7 @@ print("Setting libraries path...")
 #===============================================================================
 #                         LOADING LIBRARIES
 #===============================================================================
-cat("\nLoading Libraries...\n")
+cat("Loading Libraries...\n")
 required_libs <- c("BiocGenerics","S4Vectors","IRanges","GenomicRanges", "SummarizedExperiment","DESeq2",
                    "RColorBrewer", "limma", "vsn","pheatmap", "PCAtools","Cairo", "gridExtra")
 
@@ -59,29 +59,29 @@ interaction= myargs[7]# YES or NO
 readcounts <- readRDS("readcounts.RDS")
 df<-readRDS("df.RDS")
 
-cat("\nPreview of Read Counts Matrix (readcounts):\n")
+cat("Preview of Read Counts Matrix (readcounts):\n")
 print(head(readcounts))
-cat("\nPreview of Sample Metadata (df):\n")
+cat("Preview of Sample Metadata (df):\n")
 print(df)
 
-cat("\nDimensions of the Read Counts Matrix:\n")
+cat("Dimensions of the Read Counts Matrix:\n")
 cat(sprintf("Genes (rows): %d | Samples (columns): %d\n", nrow(readcounts), ncol(readcounts)))
-cat("\n Dimensions of the Sample Metadata (df):\n")
+cat("Dimensions of the Sample Metadata (df):\n")
 cat(sprintf("Samples (rows): %d | Annotations (columns): %d\n", nrow(df), ncol(df)))
 
 # Display names for matching check
-cat("\n Checking that sample names in 'readcounts' match row names in 'df'...\n")
-cat("\n Column names of readcounts:\n")
+cat("Checking that sample names in 'readcounts' match row names in 'df'...\n")
+cat("Column names of readcounts:\n")
 print(colnames(readcounts))
 
-cat("\n Row names of sample metadata (df):\n")
+cat("Row names of sample metadata (df):\n")
 print(rownames(df))
 
 
 if (all(colnames(readcounts) == rownames(df))) {
-  cat("\n Sample names are properly aligned: each column in 'readcounts' matches a row in 'df'.\n")
+  cat("Sample names are properly aligned: each column in 'readcounts' matches a row in 'df'.\n")
 } else {
-  cat("\n Mismatch detected!\n")
+  cat("Mismatch detected!\n")
   cat("Each column name in 'readcounts' must exactly match a row name in 'df'.\n")
   stop("Sample name mismatch. Please fix the alignment between readcounts and sample metadata.")
 }
@@ -100,15 +100,7 @@ sink.reset <- function(){
 #===============================================================================
 setwd(file.path(myargs[1],"DeSeqResults"))
 
-# MASTER PDF FOR ALL FIGURES
-# Cairo::CairoPDF(
-#   file = "All_DESeq2_Figures.pdf",
-#   width = 12,
-#   height = 8
-# )
-
-
-cat("\n========== DESEQ MATRIX ANALYSIS STARTED ==========\n")
+cat("========== DESEQ MATRIX ANALYSIS STARTED ==========\n")
 
 #===============================================================================
 #                         1- LIBRARY SIZE BAR PLOT
@@ -149,6 +141,7 @@ invisible(dev.off())
     
     print("Creating dds Matrix for following design formula: ")
     print(design_formula)
+   
     dds <- DESeqDataSetFromMatrix(countData = readcounts,colData = df ,design = design_formula)
 
     
@@ -186,7 +179,7 @@ invisible(dev.off())
     cat("   - No filtering applied. All genes retained.\n")
   }
   if (myargs[3] == "countsonly" || myargs[3] == "both") {
-    cat("\nPerforming gene-level filtering based on read counts...\n")
+    cat("Performing gene-level filtering based on read counts...\n")
     cat("   - Retaining genes with total counts ≥", counts, "\n")
     keep <- rowSums(counts(dds)) >= counts
     dds <- dds[keep,]
@@ -213,8 +206,8 @@ invisible(dev.off())
   }
   
   genes_final <- nrow(dds)
-  cat("\nFiltering complete.\n")
-  cat("\n======================================================\n")
+  cat("Filtering complete.\n")
+  cat("======================================================\n")
   cat("                FILTERING SUMMARY                    \n")
   cat("======================================================\n")
   cat(sprintf(" Initial Gene Count                  : %d\n", genes_initial))
@@ -238,7 +231,7 @@ invisible(dev.off())
   cat(sprintf(" Total Genes Filtered Out            : %d\n", total_dropped))
   cat(sprintf(" Final Gene Count Remaining          : %d (%.2f%% retained)\n", genes_final, pct_retained))
   cat(sprintf(" Final Matrix Dimensions             : %d Genes x %d Samples\n", genes_final, total_samples))
-  cat("======================================================\n\n")
+  cat("======================================================\n")
   
   
   
@@ -257,7 +250,7 @@ invisible(dev.off())
   print("Running DESeq Analysis....")
   dds <- DESeq(dds)
   # Get the results
-  cat("\nExtracting results...\n")
+  cat("Extracting results...\n")
   res <- results(dds)
   print(res)
   print("DESeqDataSet (dds) after DESeq2 Analysis:")
@@ -290,7 +283,7 @@ invisible(dev.off())
   print("Listing Available Results Names from DESeq2 Model:")
   resultName = paste(strsplit(resultsNames(dds),' '),collapse=',')
   cat("Results Names (compact view): ", resultName, "\n")
-  cat("\nDetailed Results Names (structured list):\n")
+  cat("Detailed Results Names (structured list):\n")
   print(resultsNames(dds))
   
   
@@ -303,16 +296,16 @@ invisible(dev.off())
   print("DESeq2 Normalized Counts:")
   print(head(normalized_counts))
   write.table(normalized_counts, file = "normalized_counts.tsv", sep = "\t", quote = FALSE, col.names = NA)
-  cat("\nNormalized read counts have been saved to 'normalized_counts.tsv'.\n")
+  cat("Normalized read counts have been saved to 'normalized_counts.tsv'.\n")
   
-  cat("\nSaving dds object...")
+  cat("Saving dds object... ")
   print(file.path(myargs[1]))
   setwd(file.path(myargs[1]))
   saveRDS(dds, file = "dds.RDS") #Save single object
   sink.reset()
   cat("\nSaved dds object as dds.RDS")
 #-------------------------------------#
-  cat("\nChecking DeSeqResults path...\n")
+  cat("Checking DeSeqResults path...\n")
   start_time <- Sys.time()
   print(file.path(myargs[1], "DeSeqResults"))
   cat("Calling dir.exists()...\n")
@@ -329,7 +322,7 @@ invisible(dev.off())
   cat("Time taken: "); print(Sys.time() - start_time)
   
   if (isTRUE(result)) {
-    cat("\nTrying to change directory...\n")
+    cat("Trying to change directory...\n")
     setwd(file.path(myargs[1], "DeSeqResults"))
     cat(" Directory changed successfully.\n")
   } else if (isFALSE(result)) {
@@ -350,11 +343,11 @@ invisible(dev.off())
   # Calculate cpm counts for unnormalized and normalized data
   readcounts_raw <- counts(dds, normalized = FALSE)
   logcounts <- log2(readcounts_raw + 1)        
-  print("\nLogcounts:\n")
-  print(head(logcounts))
+  print("Logcounts:\n")
+  print(head(logcounts,3))
     lognormalized_counts <- log2(normalized_counts + 1) 
-    print("\nLognormalized Counts:\n")
-    print(head(lognormalized_counts))
+    print("Lognormalized Counts:\n")
+    print(head(lognormalized_counts,3))
     
   cat("\nGenerating Counts_Boxplots (Boxplot_Unnormalized_LogCounts.png, Boxplot_Normalized_LogCounts.png)")
   
@@ -529,7 +522,7 @@ invisible(dev.off())
   
   inch_width  <- cols * 3.5
   inch_height <- rows * 3.0
-    cat("\nGenerating Unnormalized_vs_Normalized_Profiles.png\n")
+    cat("Generating Unnormalized_vs_Normalized_Profiles.png\n")
   CairoPNG( file = "Unnormalized_vs_Normalized_Profiles.png",  width = inch_width,
     height = inch_height,   units = "in",  # Explicitly tell Cairo to use inches
     res = 130  )
@@ -663,7 +656,7 @@ invisible(dev.off())
   saveRDS(rld, file = "rld_data.rds")
   }
   print("\nRegularized log:")
-  print(rld)
+  print(head(rld))
   print(rowData(rld))
 
   # ==============================================================================
@@ -691,7 +684,7 @@ invisible(dev.off())
    saveRDS(VST, file = "vst_data.rds")
   }#else
   print("\nVariance stablilizing transform:")
-  print(VST)
+  print(head(VST))
   
   #####################################
   # MDS PLOTS: rld, VST
@@ -1284,6 +1277,6 @@ invisible(dev.off())
    print("\nDESeq Matrix and Plots generated")
 
  
- cat("\n========== DESEQ MATRIX ANALYSIS FINISED ==========\n")
+ cat("========== DESEQ MATRIX ANALYSIS FINISED ==========\n")
  
  

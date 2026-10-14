@@ -40,7 +40,7 @@ for (i in seq_along(folder_paths)) {
   cat(sprintf("--> Starting Folder %d/%d: %s (%s)\n", i, length(folder_paths), basename(folder_path), mode_name))
   
   # Fetch all PNG images inside this directory
-  image_files <- list.files(folder_path, pattern = "\\.png$", full.names = TRUE, recursive = FALSE)
+  image_files <- list.files(folder_path, pattern = "\\.png$", full.names = TRUE, recursive = TRUE)
   
   if (length(image_files) == 0) {
     cat("    ! No PNG images found in this directory. Skipping PDF creation.\n")
@@ -58,8 +58,19 @@ for (i in seq_along(folder_paths)) {
   pdf(file = pdf_filename, width = 11, height = 8.5) # Landscape orientation
   
   for (img_path in image_files) {
-    img_name <- tools::file_path_sans_ext(basename(img_path))
-    cat(sprintf("    + Adding image: %s\n", img_name))
+    
+    # Safely compute relative path (e.g., Upregulated/gseMKEGG_DotPlot) without inline closures
+    clean_folder <- normalizePath(folder_path, winslash = "/", mustWork = FALSE)
+    clean_img    <- normalizePath(img_path, winslash = "/", mustWork = FALSE)
+    
+    # Strip base directory path cleanly
+    rel_path <- sub(paste0("^", clean_folder, "/?"), "", clean_img, ignore.case = TRUE)
+    img_display_name <- tools::file_path_sans_ext(rel_path)
+    
+    cat(sprintf("    + Adding image: %s\n", img_display_name))
+    
+    #img_name <- tools::file_path_sans_ext(basename(img_path))
+    #cat(sprintf("    + Adding image: %s\n", img_name))
     
     # Aggressive garbage collection before processing the next image matrix
     gc(verbose = FALSE)
@@ -68,7 +79,7 @@ for (i in seq_along(folder_paths)) {
     img_data <- tryCatch({
       png::readPNG(img_path)
     }, error = function(e) {
-      cat(sprintf("    [ERROR] Could not read %s. Skipping.\n", img_name))
+      cat(sprintf("    [ERROR] Could not read %s. Skipping.\n", img_display_name))
       return(NULL)
     })
     
@@ -78,7 +89,7 @@ for (i in seq_along(folder_paths)) {
     grid.newpage()
     
     # Safe Title String
-    title_text <- sprintf("%s | %s", mode_name, img_name)
+    title_text <- sprintf("%s | %s", mode_name, img_display_name)
     text_size <- if (nchar(title_text) > 50) 10 else 12
     
     # Title Header Viewport
@@ -109,7 +120,7 @@ for (i in seq_along(folder_paths)) {
       popViewport()
       
     }, error = function(e) {
-      cat(sprintf("    [ERROR] Failed to render raster for %s. Skipping page.\n", img_name))
+      cat(sprintf("    [ERROR] Failed to render raster for %s. Skipping page.\n", img_display_name))
       if (length(current.vp()) > 1) popViewport()
     })
     
@@ -135,4 +146,4 @@ for (i in seq_along(folder_paths)) {
 }
 
 cat("\n==================================================\n")
-cat("All folders processed completely.\n")
+cat("All folders and subdirectories processed completely.\n")

@@ -362,6 +362,33 @@ public class App extends javax.swing.JFrame {
 
     }
 
+    // synchronized keyword prevents file write conflicts between threads
+    public static synchronized void logMessage(String outputDirPath, String message) {
+        // 1. Append to GUI JTextArea (Runs on Event Dispatch Thread safely)
+        App.textArea.append(message + "\n");
+
+        // 2. Append to physical log file
+        if (outputDirPath != null && !outputDirPath.trim().isEmpty()) {
+            File dir = new File(outputDirPath);
+            if (!dir.exists()) {
+                dir.mkdirs();
+            }
+
+            File logFile = new File(dir, "execution.log");
+
+            try (FileWriter fw = new FileWriter(logFile, true);
+                 PrintWriter pw = new PrintWriter(fw)) {
+                
+                pw.println(message);
+
+            } catch (IOException e) {
+                App.LOGGER.error("Failed to write to execution.log: " + e.getMessage());
+            }
+        }
+    }
+    
+    
+    
     /**
      * This method is called from within the constructor to initialize the form.
      * WARNING: Do NOT modify this code. The content of this method is always

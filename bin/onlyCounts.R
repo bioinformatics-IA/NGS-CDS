@@ -10,12 +10,7 @@ myargs = commandArgs(trailingOnly=TRUE)
 setwd(file.path(myargs[1]))
 cat("\nLoading Libraries...\n")
 
-#suppressPackageStartupMessages(library(crayon,lib.loc=myargs[2]))
-#suppressPackageStartupMessages(library(withr,lib.loc=myargs[2]))
-#suppressPackageStartupMessages(library(tzdb,lib.loc=myargs[2]))
-#suppressPackageStartupMessages(library(backports,lib.loc=myargs[2]))
 suppressPackageStartupMessages(library(tidyverse,lib.loc=myargs[2]))
-#suppressPackageStartupMessages(library(vroom, lib.loc = myargs[2]))
 
 runMode<-myargs[3] # FOLDER or FILE
 inputPath <- myargs[4]
@@ -29,7 +24,7 @@ read_in_feature_counts<- function(file){
   print(cnt)
   return(cnt)
 }
-cat("\n========== Preparing Read Counts ==========\n")
+cat("========== Preparing Read Counts ==========\n")
 
 if(runMode == "FOLDER"){
   f_files<- list.files(inputPath, pattern = "*\\.featureCounts$", full.names = T)
@@ -85,7 +80,8 @@ row.names(readcounts) <- readcounts[[1]] # c(readcounts$Geneid) #Setting row nam
     "' but expected 'Geneid' or 'gene.id'. Please check your count file."
   ))
 }
-head(readcounts)
+
+head(readcounts,3)
 readcounts <- readcounts[,-c(1)] #removing extra gene column
 
 #REMOVING ROWS WITH 0
@@ -103,8 +99,8 @@ if (after_rows < before_rows) {
 
 
 #names(readcounts)  <- gsub(paste0(".*",p,sep=""), "", names(readcounts) ) #removing path from sample name
-print("Initial Counts Dataframe (First 10 rows):")
-print(head(readcounts, 10))
+print("Initial Counts Dataframe (First 5 rows):")
+print(head(readcounts, 5))
 
 readcounts <- round(as.matrix(readcounts))  # Round any floating-point values
 
@@ -113,7 +109,7 @@ cat("Summary of the combined counts data frame:\n")
 print(str(readcounts))
 cat(sprintf("Total Genes: %d | Total Samples: %d\n", nrow(readcounts), ncol(readcounts)))
 
-cat("\nEnsuring all sample counts are numeric and converting to integers where needed...\n")
+cat("Ensuring all sample counts are numeric and converting to integers where needed...\n")
 
 # Save the row names (gene names) before conversion
 gene_names <- rownames(readcounts)
@@ -138,5 +134,5 @@ if (!all(sapply(readcounts, is.integer))) {
 #SAVING readcounts Dataframe
 
 saveRDS(readcounts, file = "readcounts.RDS") 
-cat("\n========== Finished Preparing Read Counts ==========\n")
+cat("========== Finished Preparing Read Counts ==========\n")
 

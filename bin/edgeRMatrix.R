@@ -72,8 +72,8 @@ if(factMode=="SINGLE")
   stop("Critical Failure: Factor mode configuration conflicts with sample design metadata structure dimensions.")
 }
 
-print("DGEList object created. Displaying summary of read counts and sample grouping:")
-print(dgList)
+print("DGEList object created. Displaying summary of read counts and sample grouping (Top 10):")
+print(head(dgList,10))
 #Create design for multiple factors
 #sampleGroups <- factor(apply(df[, 2:ncol(df)], 1, paste, collapse="."))
 if(designMode == "NO"){
@@ -100,7 +100,7 @@ if (nrow(myCPM) >= 10 ) {
   print(myCPM[1:10, ])
 } else {
   cat(sprintf("CPM matrix is too small (%d rows x %d columns), showing full matrix:\n", nrow(myCPM), ncol(myCPM)))
-  print(myCPM)
+  print(head(myCPM))
 }
 
 write.table(myCPM, file = "CPM_Matrix.tsv", sep = "\t", quote = FALSE, row.names = TRUE)

@@ -2812,7 +2812,7 @@
                                       <EmptySpace type="separate" max="-2" attributes="0"/>
                                       <Component id="jointModeH" min="-2" max="-2" attributes="0"/>
                                       <EmptySpace max="32767" attributes="0"/>
-                                      <Component id="genomicDBPanel" min="-2" max="-2" attributes="0"/>
+                                      <Component id="intervalPanel" min="-2" max="-2" attributes="0"/>
                                       <EmptySpace min="-2" pref="256" max="-2" attributes="0"/>
                                   </Group>
                                   <Group type="102" attributes="0">
@@ -2848,7 +2848,7 @@
                                       <EmptySpace max="-2" attributes="0"/>
                                       <Component id="ercCombo" min="-2" max="-2" attributes="0"/>
                                   </Group>
-                                  <Component id="genomicDBPanel" alignment="0" min="-2" max="-2" attributes="0"/>
+                                  <Component id="intervalPanel" alignment="0" min="-2" max="-2" attributes="0"/>
                               </Group>
                               <EmptySpace min="-2" pref="32" max="-2" attributes="0"/>
                               <Component id="jLabel8" min="-2" max="-2" attributes="0"/>
@@ -3107,11 +3107,11 @@
                         <AuxValue name="JavaCodeGenerator_TypeParameters" type="java.lang.String" value="&lt;String&gt;"/>
                       </AuxValues>
                     </Component>
-                    <Container class="javax.swing.JPanel" name="genomicDBPanel">
+                    <Container class="javax.swing.JPanel" name="intervalPanel">
                       <Properties>
                         <Property name="border" type="javax.swing.border.Border" editor="org.netbeans.modules.form.editors2.BorderEditor">
                           <Border info="org.netbeans.modules.form.compat2.border.TitledBorderInfo">
-                            <TitledBorder title="GenomicsDBImport Settings:">
+                            <TitledBorder title="GenomicsDBImport / Target Intervals Settings:">
                               <Font PropertyName="font" name="Liberation Sans" size="12" style="1"/>
                               <Color PropertyName="color" blue="ff" green="ff" red="ff" type="rgb"/>
                             </TitledBorder>
@@ -3345,6 +3345,9 @@
                             <Property name="selected" type="boolean" value="true"/>
                             <Property name="text" type="java.lang.String" value="To upload interval file:"/>
                           </Properties>
+                          <Events>
+                            <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="uploadIntervalfileRActionPerformed"/>
+                          </Events>
                         </Component>
                         <Component class="javax.swing.JRadioButton" name="createIntervalR">
                           <Properties>
@@ -3532,159 +3535,215 @@
                   <Layout>
                     <DimensionLayout dim="0">
                       <Group type="103" groupAlignment="0" attributes="0">
-                          <Group type="102" alignment="0" attributes="0">
-                              <EmptySpace max="-2" attributes="0"/>
+                          <Group type="102" attributes="0">
                               <Group type="103" groupAlignment="0" attributes="0">
-                                  <Group type="102" alignment="0" attributes="0">
-                                      <EmptySpace min="-2" pref="7" max="-2" attributes="0"/>
+                                  <Component id="jSeparator2" alignment="0" max="32767" attributes="0"/>
+                                  <Component id="jSeparator3" max="32767" attributes="0"/>
+                                  <Group type="102" attributes="0">
                                       <Group type="103" groupAlignment="0" attributes="0">
-                                          <Component id="jScrollPane10" alignment="0" min="-2" pref="937" max="-2" attributes="0"/>
-                                          <Component id="jLabel18" min="-2" max="-2" attributes="0"/>
-                                          <Component id="jLabel40" alignment="0" min="-2" max="-2" attributes="0"/>
-                                          <Component id="jLabel34" alignment="0" min="-2" max="-2" attributes="0"/>
-                                          <Group type="102" alignment="0" attributes="0">
-                                              <Component id="jLabel17" min="-2" max="-2" attributes="0"/>
-                                              <EmptySpace min="-2" pref="29" max="-2" attributes="0"/>
-                                              <Component id="selectVariantsOp" min="-2" max="-2" attributes="0"/>
-                                          </Group>
-                                          <Component id="jLabel36" min="-2" max="-2" attributes="0"/>
-                                          <Component id="jLabel20" alignment="0" min="-2" max="-2" attributes="0"/>
                                           <Group type="102" attributes="0">
-                                              <EmptySpace min="15" pref="15" max="-2" attributes="0"/>
+                                              <EmptySpace min="9" pref="9" max="-2" attributes="0"/>
+                                              <Component id="somaticWarning3" min="-2" pref="106" max="-2" attributes="0"/>
+                                              <EmptySpace max="-2" attributes="0"/>
+                                              <Component id="gnomadVcf" max="32767" attributes="0"/>
+                                          </Group>
+                                          <Group type="102" alignment="0" attributes="0">
+                                              <EmptySpace max="-2" attributes="0"/>
                                               <Group type="103" groupAlignment="0" attributes="0">
-                                                  <Group type="102" alignment="0" attributes="0">
-                                                      <Group type="103" groupAlignment="0" attributes="0">
-                                                          <Component id="jCheckBox5" min="-2" max="-2" attributes="0"/>
-                                                          <Component id="jCheckBox6" min="-2" max="-2" attributes="0"/>
-                                                          <Component id="jCheckBox7" alignment="0" min="-2" max="-2" attributes="0"/>
-                                                          <Component id="jCheckBox8" alignment="0" min="-2" max="-2" attributes="0"/>
-                                                      </Group>
-                                                      <EmptySpace min="-2" pref="12" max="-2" attributes="0"/>
-                                                      <Group type="103" groupAlignment="2" attributes="0">
-                                                          <Component id="selectTypeCombo" alignment="2" min="-2" pref="221" max="-2" attributes="0"/>
-                                                          <Component id="select" alignment="2" min="-2" pref="221" max="-2" attributes="0"/>
-                                                          <Component id="selectGenotype" alignment="2" min="-2" pref="221" max="-2" attributes="0"/>
-                                                          <Component id="Linterval" alignment="2" min="-2" pref="221" max="-2" attributes="0"/>
-                                                      </Group>
+                                                  <Group type="102" attributes="0">
+                                                      <EmptySpace min="6" pref="6" max="-2" attributes="0"/>
+                                                      <Component id="somaticWarning6" min="-2" pref="106" max="-2" attributes="0"/>
                                                       <EmptySpace max="-2" attributes="0"/>
-                                                      <Group type="103" groupAlignment="0" attributes="0">
-                                                          <Group type="102" alignment="0" attributes="0">
-                                                              <Component id="add3" min="-2" pref="30" max="-2" attributes="0"/>
-                                                              <EmptySpace max="-2" attributes="0"/>
-                                                              <Component id="del3" min="-2" pref="30" max="-2" attributes="0"/>
-                                                          </Group>
-                                                          <Group type="102" alignment="0" attributes="0">
-                                                              <Component id="intervalBtn1" min="-2" pref="30" max="-2" attributes="0"/>
-                                                              <EmptySpace max="-2" attributes="0"/>
-                                                              <Component id="add4" min="-2" pref="30" max="-2" attributes="0"/>
-                                                              <EmptySpace max="-2" attributes="0"/>
-                                                              <Component id="del4" min="-2" pref="30" max="-2" attributes="0"/>
-                                                          </Group>
-                                                          <Group type="102" alignment="0" attributes="0">
-                                                              <Group type="103" groupAlignment="0" attributes="0">
-                                                                  <Group type="102" alignment="0" attributes="0">
-                                                                      <Component id="add1" min="-2" pref="30" max="-2" attributes="0"/>
-                                                                      <EmptySpace max="-2" attributes="0"/>
-                                                                      <Component id="del1" min="-2" pref="30" max="-2" attributes="0"/>
-                                                                  </Group>
-                                                                  <Group type="102" alignment="0" attributes="0">
-                                                                      <Component id="add2" min="-2" pref="30" max="-2" attributes="0"/>
-                                                                      <EmptySpace max="-2" attributes="0"/>
-                                                                      <Component id="del2" min="-2" pref="30" max="-2" attributes="0"/>
-                                                                  </Group>
-                                                              </Group>
-                                                              <EmptySpace min="-2" pref="53" max="-2" attributes="0"/>
-                                                              <Group type="103" groupAlignment="0" attributes="0">
-                                                                  <Component id="excludeFiltered" min="-2" max="-2" attributes="0"/>
-                                                                  <Group type="102" alignment="0" attributes="0">
-                                                                      <Component id="restrictAlleles" min="-2" max="-2" attributes="0"/>
-                                                                      <EmptySpace max="-2" attributes="0"/>
-                                                                      <Component id="restrictAlleleCombo" min="-2" pref="159" max="-2" attributes="0"/>
-                                                                      <EmptySpace max="-2" attributes="0"/>
-                                                                      <Component id="add10" min="-2" pref="30" max="-2" attributes="0"/>
-                                                                      <EmptySpace max="-2" attributes="0"/>
-                                                                      <Component id="del10" min="-2" pref="30" max="-2" attributes="0"/>
-                                                                  </Group>
-                                                              </Group>
-                                                          </Group>
-                                                      </Group>
+                                                      <Component id="clinvarVCF" max="32767" attributes="0"/>
                                                   </Group>
-                                                  <Component id="jScrollPane7" min="-2" pref="937" max="-2" attributes="0"/>
-                                                  <Component id="jLabel41" min="-2" max="-2" attributes="0"/>
+                                                  <Group type="102" attributes="0">
+                                                      <Component id="somaticWarning5" min="-2" pref="106" max="-2" attributes="0"/>
+                                                      <EmptySpace min="-2" pref="12" max="-2" attributes="0"/>
+                                                      <Component id="dbsnpVCF" max="32767" attributes="0"/>
+                                                  </Group>
                                               </Group>
                                           </Group>
-                                          <Component id="jLabel32" min="-2" max="-2" attributes="0"/>
                                       </Group>
-                                  </Group>
-                                  <Component id="jLabel19" alignment="0" min="-2" max="-2" attributes="0"/>
-                                  <Component id="jLabel25" alignment="0" min="-2" max="-2" attributes="0"/>
-                                  <Group type="102" alignment="0" attributes="0">
-                                      <Component id="jLabel21" min="-2" max="-2" attributes="0"/>
-                                      <EmptySpace min="20" pref="20" max="-2" attributes="0"/>
-                                      <Component id="snpEff_DB" min="-2" pref="255" max="-2" attributes="0"/>
-                                  </Group>
-                                  <Group type="102" alignment="0" attributes="0">
-                                      <EmptySpace min="-2" pref="8" max="-2" attributes="0"/>
+                                      <EmptySpace type="unrelated" max="-2" attributes="0"/>
                                       <Group type="103" groupAlignment="0" attributes="0">
-                                          <Component id="jScrollPane13" alignment="0" min="-2" pref="937" max="-2" attributes="0"/>
-                                          <Component id="jLabel35" alignment="0" min="-2" max="-2" attributes="0"/>
+                                          <Component id="browseDbsnp" min="-2" max="-2" attributes="0"/>
+                                          <Component id="browseGenomad" min="-2" max="-2" attributes="0"/>
+                                          <Component id="browseClinvar" min="-2" max="-2" attributes="0"/>
                                       </Group>
+                                      <EmptySpace min="-2" pref="271" max="-2" attributes="0"/>
                                   </Group>
-                                  <Group type="102" alignment="0" attributes="0">
-                                      <EmptySpace min="6" pref="6" max="-2" attributes="0"/>
-                                      <Component id="jLabel13" min="-2" max="-2" attributes="0"/>
-                                      <EmptySpace type="separate" max="-2" attributes="0"/>
-                                      <Component id="snpSiftCombobox" min="-2" pref="686" max="-2" attributes="0"/>
-                                      <EmptySpace type="separate" max="-2" attributes="0"/>
-                                      <Component id="add8" min="-2" pref="30" max="-2" attributes="0"/>
-                                      <EmptySpace max="-2" attributes="0"/>
-                                      <Component id="del8" min="-2" pref="30" max="-2" attributes="0"/>
-                                  </Group>
-                                  <Component id="jLabel23" alignment="0" min="-2" max="-2" attributes="0"/>
-                                  <Component id="jLabel43" alignment="0" min="-2" max="-2" attributes="0"/>
-                                  <Group type="102" alignment="0" attributes="0">
-                                      <Component id="jLabel26" min="-2" max="-2" attributes="0"/>
-                                      <EmptySpace type="separate" max="-2" attributes="0"/>
-                                      <Component id="variantFilterA" min="-2" max="-2" attributes="0"/>
-                                  </Group>
-                                  <Group type="102" alignment="0" attributes="0">
-                                      <Component id="snpEffRadio" min="-2" max="-2" attributes="0"/>
-                                      <EmptySpace type="separate" max="-2" attributes="0"/>
-                                      <Component id="vepRadio" min="-2" max="-2" attributes="0"/>
-                                      <EmptySpace type="separate" max="-2" attributes="0"/>
-                                      <Component id="snpEffvepRadio" min="-2" max="-2" attributes="0"/>
-                                  </Group>
-                                  <Group type="102" alignment="0" attributes="0">
-                                      <EmptySpace min="6" pref="6" max="-2" attributes="0"/>
+                                  <Component id="somaticWarning7" alignment="1" max="32767" attributes="0"/>
+                                  <Group type="102" attributes="0">
                                       <Group type="103" groupAlignment="0" attributes="0">
                                           <Group type="102" alignment="0" attributes="0">
-                                              <Component id="jLabel15" min="-2" max="-2" attributes="0"/>
-                                              <EmptySpace type="unrelated" max="-2" attributes="0"/>
-                                              <Component id="vepAssembly" min="-2" pref="211" max="-2" attributes="0"/>
-                                              <EmptySpace min="-2" pref="34" max="-2" attributes="0"/>
-                                              <Component id="jLabel16" min="-2" max="-2" attributes="0"/>
-                                              <EmptySpace type="unrelated" max="-2" attributes="0"/>
-                                              <Component id="vepSpecies" min="-2" pref="225" max="-2" attributes="0"/>
+                                              <EmptySpace min="-2" pref="8" max="-2" attributes="0"/>
+                                              <Group type="103" groupAlignment="0" attributes="0">
+                                                  <Component id="jScrollPane13" alignment="0" min="-2" pref="937" max="-2" attributes="0"/>
+                                                  <Component id="jLabel35" alignment="0" min="-2" max="-2" attributes="0"/>
+                                              </Group>
                                           </Group>
-                                          <Component id="jLabel1" min="-2" max="-2" attributes="0"/>
+                                          <Group type="102" alignment="0" attributes="0">
+                                              <EmptySpace min="6" pref="6" max="-2" attributes="0"/>
+                                              <Component id="jLabel13" min="-2" max="-2" attributes="0"/>
+                                              <EmptySpace type="separate" max="-2" attributes="0"/>
+                                              <Component id="snpSiftCombobox" min="-2" pref="686" max="-2" attributes="0"/>
+                                              <EmptySpace type="separate" max="-2" attributes="0"/>
+                                              <Component id="add8" min="-2" pref="30" max="-2" attributes="0"/>
+                                              <EmptySpace max="-2" attributes="0"/>
+                                              <Component id="del8" min="-2" pref="30" max="-2" attributes="0"/>
+                                          </Group>
+                                          <Component id="jLabel43" alignment="0" min="-2" max="-2" attributes="0"/>
+                                      </Group>
+                                      <EmptySpace min="0" pref="6" max="32767" attributes="0"/>
+                                  </Group>
+                                  <Group type="102" attributes="0">
+                                      <EmptySpace max="-2" attributes="0"/>
+                                      <Group type="103" groupAlignment="0" attributes="0">
+                                          <Component id="jSeparator1" alignment="1" max="32767" attributes="0"/>
+                                          <Component id="somaticWarning2" alignment="0" max="32767" attributes="0"/>
+                                          <Component id="somaticWarning4" alignment="1" max="32767" attributes="0"/>
+                                          <Group type="102" attributes="0">
+                                              <Group type="103" groupAlignment="0" attributes="0">
+                                                  <Group type="102" alignment="0" attributes="0">
+                                                      <EmptySpace min="-2" pref="7" max="-2" attributes="0"/>
+                                                      <Group type="103" groupAlignment="0" attributes="0">
+                                                          <Component id="jScrollPane10" alignment="0" min="-2" pref="937" max="-2" attributes="0"/>
+                                                          <Component id="jLabel18" min="-2" max="-2" attributes="0"/>
+                                                          <Component id="jLabel40" alignment="0" min="-2" max="-2" attributes="0"/>
+                                                          <Component id="jLabel34" alignment="0" min="-2" max="-2" attributes="0"/>
+                                                          <Group type="102" alignment="0" attributes="0">
+                                                              <Component id="jLabel17" min="-2" max="-2" attributes="0"/>
+                                                              <EmptySpace min="-2" pref="29" max="-2" attributes="0"/>
+                                                              <Component id="selectVariantsOp" min="-2" max="-2" attributes="0"/>
+                                                          </Group>
+                                                          <Component id="jLabel36" min="-2" max="-2" attributes="0"/>
+                                                          <Component id="jLabel20" alignment="0" min="-2" max="-2" attributes="0"/>
+                                                          <Group type="102" attributes="0">
+                                                              <EmptySpace min="15" pref="15" max="-2" attributes="0"/>
+                                                              <Group type="103" groupAlignment="0" attributes="0">
+                                                                  <Group type="102" alignment="0" attributes="0">
+                                                                      <Group type="103" groupAlignment="0" attributes="0">
+                                                                          <Component id="jCheckBox5" min="-2" max="-2" attributes="0"/>
+                                                                          <Component id="jCheckBox6" min="-2" max="-2" attributes="0"/>
+                                                                          <Component id="jCheckBox7" alignment="0" min="-2" max="-2" attributes="0"/>
+                                                                          <Component id="jCheckBox8" alignment="0" min="-2" max="-2" attributes="0"/>
+                                                                      </Group>
+                                                                      <EmptySpace min="-2" pref="12" max="-2" attributes="0"/>
+                                                                      <Group type="103" groupAlignment="2" attributes="0">
+                                                                          <Component id="selectTypeCombo" alignment="2" min="-2" pref="221" max="-2" attributes="0"/>
+                                                                          <Component id="select" alignment="2" min="-2" pref="221" max="-2" attributes="0"/>
+                                                                          <Component id="selectGenotype" alignment="2" min="-2" pref="221" max="-2" attributes="0"/>
+                                                                          <Component id="Linterval" alignment="2" min="-2" pref="221" max="-2" attributes="0"/>
+                                                                      </Group>
+                                                                      <EmptySpace max="-2" attributes="0"/>
+                                                                      <Group type="103" groupAlignment="0" attributes="0">
+                                                                          <Group type="102" alignment="0" attributes="0">
+                                                                              <Component id="add3" min="-2" pref="30" max="-2" attributes="0"/>
+                                                                              <EmptySpace max="-2" attributes="0"/>
+                                                                              <Component id="del3" min="-2" pref="30" max="-2" attributes="0"/>
+                                                                          </Group>
+                                                                          <Group type="102" alignment="0" attributes="0">
+                                                                              <Component id="intervalBtn1" min="-2" pref="30" max="-2" attributes="0"/>
+                                                                              <EmptySpace max="-2" attributes="0"/>
+                                                                              <Component id="add4" min="-2" pref="30" max="-2" attributes="0"/>
+                                                                              <EmptySpace max="-2" attributes="0"/>
+                                                                              <Component id="del4" min="-2" pref="30" max="-2" attributes="0"/>
+                                                                          </Group>
+                                                                          <Group type="102" alignment="0" attributes="0">
+                                                                              <Group type="103" groupAlignment="0" attributes="0">
+                                                                                  <Group type="102" alignment="0" attributes="0">
+                                                                                      <Component id="add1" min="-2" pref="30" max="-2" attributes="0"/>
+                                                                                      <EmptySpace max="-2" attributes="0"/>
+                                                                                      <Component id="del1" min="-2" pref="30" max="-2" attributes="0"/>
+                                                                                  </Group>
+                                                                                  <Group type="102" alignment="0" attributes="0">
+                                                                                      <Component id="add2" min="-2" pref="30" max="-2" attributes="0"/>
+                                                                                      <EmptySpace max="-2" attributes="0"/>
+                                                                                      <Component id="del2" min="-2" pref="30" max="-2" attributes="0"/>
+                                                                                  </Group>
+                                                                              </Group>
+                                                                              <EmptySpace min="-2" pref="53" max="-2" attributes="0"/>
+                                                                              <Group type="103" groupAlignment="0" attributes="0">
+                                                                                  <Component id="excludeFiltered" min="-2" max="-2" attributes="0"/>
+                                                                                  <Group type="102" alignment="0" attributes="0">
+                                                                                      <Component id="restrictAlleles" min="-2" max="-2" attributes="0"/>
+                                                                                      <EmptySpace max="-2" attributes="0"/>
+                                                                                      <Component id="restrictAlleleCombo" min="-2" pref="159" max="-2" attributes="0"/>
+                                                                                      <EmptySpace max="-2" attributes="0"/>
+                                                                                      <Component id="add10" min="-2" pref="30" max="-2" attributes="0"/>
+                                                                                      <EmptySpace max="-2" attributes="0"/>
+                                                                                      <Component id="del10" min="-2" pref="30" max="-2" attributes="0"/>
+                                                                                  </Group>
+                                                                              </Group>
+                                                                          </Group>
+                                                                      </Group>
+                                                                  </Group>
+                                                                  <Component id="jScrollPane7" min="-2" pref="937" max="-2" attributes="0"/>
+                                                                  <Component id="jLabel41" min="-2" max="-2" attributes="0"/>
+                                                              </Group>
+                                                          </Group>
+                                                          <Component id="jLabel32" min="-2" max="-2" attributes="0"/>
+                                                          <Component id="somaticWarningLabel" min="-2" max="-2" attributes="0"/>
+                                                      </Group>
+                                                  </Group>
+                                                  <Component id="jLabel19" alignment="0" min="-2" max="-2" attributes="0"/>
+                                                  <Component id="jLabel25" alignment="0" min="-2" max="-2" attributes="0"/>
+                                                  <Group type="102" alignment="0" attributes="0">
+                                                      <Component id="jLabel21" min="-2" max="-2" attributes="0"/>
+                                                      <EmptySpace min="20" pref="20" max="-2" attributes="0"/>
+                                                      <Component id="snpEff_DB" min="-2" pref="255" max="-2" attributes="0"/>
+                                                  </Group>
+                                                  <Component id="jLabel23" alignment="0" min="-2" max="-2" attributes="0"/>
+                                                  <Group type="102" alignment="0" attributes="0">
+                                                      <Component id="snpEffRadio" min="-2" max="-2" attributes="0"/>
+                                                      <EmptySpace type="separate" max="-2" attributes="0"/>
+                                                      <Component id="vepRadio" min="-2" max="-2" attributes="0"/>
+                                                      <EmptySpace type="separate" max="-2" attributes="0"/>
+                                                      <Component id="snpEffvepRadio" min="-2" max="-2" attributes="0"/>
+                                                  </Group>
+                                                  <Group type="102" alignment="0" attributes="0">
+                                                      <EmptySpace min="6" pref="6" max="-2" attributes="0"/>
+                                                      <Group type="103" groupAlignment="0" attributes="0">
+                                                          <Group type="102" alignment="0" attributes="0">
+                                                              <Component id="jLabel15" min="-2" max="-2" attributes="0"/>
+                                                              <EmptySpace type="unrelated" max="-2" attributes="0"/>
+                                                              <Component id="vepAssembly" min="-2" pref="211" max="-2" attributes="0"/>
+                                                              <EmptySpace min="-2" pref="34" max="-2" attributes="0"/>
+                                                              <Component id="jLabel16" min="-2" max="-2" attributes="0"/>
+                                                              <EmptySpace type="unrelated" max="-2" attributes="0"/>
+                                                              <Component id="vepSpecies" min="-2" pref="225" max="-2" attributes="0"/>
+                                                          </Group>
+                                                          <Component id="jLabel1" min="-2" max="-2" attributes="0"/>
+                                                      </Group>
+                                                  </Group>
+                                                  <Group type="102" alignment="0" attributes="0">
+                                                      <EmptySpace min="-2" pref="22" max="-2" attributes="0"/>
+                                                      <Component id="jLabel12" min="-2" max="-2" attributes="0"/>
+                                                      <EmptySpace type="separate" max="-2" attributes="0"/>
+                                                      <Component id="filterNameB" min="-2" pref="221" max="-2" attributes="0"/>
+                                                      <EmptySpace min="-2" pref="155" max="-2" attributes="0"/>
+                                                      <Component id="jLabel3" min="-2" max="-2" attributes="0"/>
+                                                      <EmptySpace max="-2" attributes="0"/>
+                                                      <Component id="filterExprB" min="-2" pref="221" max="-2" attributes="0"/>
+                                                      <EmptySpace max="-2" attributes="0"/>
+                                                      <Component id="add5" min="-2" pref="30" max="-2" attributes="0"/>
+                                                      <EmptySpace max="-2" attributes="0"/>
+                                                      <Component id="del5" min="-2" pref="30" max="-2" attributes="0"/>
+                                                  </Group>
+                                                  <Component id="jLabel22" alignment="0" min="-2" max="-2" attributes="0"/>
+                                                  <Group type="102" alignment="0" attributes="0">
+                                                      <Component id="jLabel26" min="-2" max="-2" attributes="0"/>
+                                                      <EmptySpace type="separate" max="-2" attributes="0"/>
+                                                      <Component id="variantFilterA" min="-2" max="-2" attributes="0"/>
+                                                  </Group>
+                                              </Group>
+                                              <EmptySpace min="0" pref="0" max="32767" attributes="0"/>
+                                          </Group>
+                                          <Component id="jSeparator4" alignment="0" max="32767" attributes="0"/>
                                       </Group>
                                   </Group>
-                                  <Group type="102" alignment="0" attributes="0">
-                                      <EmptySpace min="-2" pref="22" max="-2" attributes="0"/>
-                                      <Component id="jLabel12" min="-2" max="-2" attributes="0"/>
-                                      <EmptySpace type="separate" max="-2" attributes="0"/>
-                                      <Component id="filterNameB" min="-2" pref="221" max="-2" attributes="0"/>
-                                      <EmptySpace min="-2" pref="155" max="-2" attributes="0"/>
-                                      <Component id="jLabel3" min="-2" max="-2" attributes="0"/>
-                                      <EmptySpace max="-2" attributes="0"/>
-                                      <Component id="filterExprB" min="-2" pref="221" max="-2" attributes="0"/>
-                                      <EmptySpace max="-2" attributes="0"/>
-                                      <Component id="add5" min="-2" pref="30" max="-2" attributes="0"/>
-                                      <EmptySpace max="-2" attributes="0"/>
-                                      <Component id="del5" min="-2" pref="30" max="-2" attributes="0"/>
-                                  </Group>
                               </Group>
-                              <EmptySpace max="32767" attributes="0"/>
+                              <EmptySpace max="-2" attributes="0"/>
                           </Group>
                       </Group>
                     </DimensionLayout>
@@ -3695,6 +3754,8 @@
                               <Component id="jLabel18" min="-2" max="-2" attributes="0"/>
                               <EmptySpace min="-2" pref="15" max="-2" attributes="0"/>
                               <Component id="jLabel32" min="-2" max="-2" attributes="0"/>
+                              <EmptySpace min="-2" pref="15" max="-2" attributes="0"/>
+                              <Component id="somaticWarningLabel" min="-2" max="-2" attributes="0"/>
                               <EmptySpace type="unrelated" min="-2" max="-2" attributes="0"/>
                               <Component id="jLabel40" min="-2" max="-2" attributes="0"/>
                               <EmptySpace type="unrelated" max="-2" attributes="0"/>
@@ -3717,7 +3778,9 @@
                               <Component id="jLabel34" min="-2" max="-2" attributes="0"/>
                               <EmptySpace max="-2" attributes="0"/>
                               <Component id="jScrollPane10" min="-2" pref="70" max="-2" attributes="0"/>
-                              <EmptySpace type="unrelated" min="-2" max="-2" attributes="0"/>
+                              <EmptySpace min="-2" pref="1" max="-2" attributes="0"/>
+                              <Component id="jSeparator1" min="-2" pref="10" max="-2" attributes="0"/>
+                              <EmptySpace min="-2" pref="1" max="-2" attributes="0"/>
                               <Group type="103" groupAlignment="3" attributes="0">
                                   <Component id="jLabel17" alignment="3" min="-2" max="-2" attributes="0"/>
                                   <Component id="selectVariantsOp" alignment="3" min="-2" max="-2" attributes="0"/>
@@ -3781,8 +3844,12 @@
                               <Component id="jLabel41" min="-2" max="-2" attributes="0"/>
                               <EmptySpace max="-2" attributes="0"/>
                               <Component id="jScrollPane7" min="-2" pref="76" max="-2" attributes="0"/>
-                              <EmptySpace type="unrelated" min="-2" max="-2" attributes="0"/>
+                              <EmptySpace min="-2" pref="4" max="-2" attributes="0"/>
+                              <Component id="jSeparator2" min="-2" pref="10" max="-2" attributes="0"/>
+                              <EmptySpace max="-2" attributes="0"/>
                               <Component id="jLabel19" min="-2" max="-2" attributes="0"/>
+                              <EmptySpace max="-2" attributes="0"/>
+                              <Component id="jLabel22" min="-2" max="-2" attributes="0"/>
                               <EmptySpace min="-2" pref="23" max="-2" attributes="0"/>
                               <Group type="103" groupAlignment="3" attributes="0">
                                   <Component id="snpEffRadio" alignment="3" min="-2" max="-2" attributes="0"/>
@@ -3805,14 +3872,35 @@
                                   <Component id="vepAssembly" alignment="3" min="-2" max="-2" attributes="0"/>
                                   <Component id="vepSpecies" alignment="3" min="-2" max="-2" attributes="0"/>
                               </Group>
-                              <EmptySpace pref="26" max="32767" attributes="0"/>
+                              <EmptySpace max="-2" attributes="0"/>
+                              <Component id="jSeparator3" min="-2" pref="10" max="-2" attributes="0"/>
+                              <EmptySpace type="unrelated" max="-2" attributes="0"/>
                               <Component id="jLabel23" min="-2" max="-2" attributes="0"/>
-                              <EmptySpace type="unrelated" max="32767" attributes="0"/>
+                              <EmptySpace type="separate" min="-2" max="-2" attributes="0"/>
+                              <Component id="somaticWarning7" min="-2" pref="27" max="-2" attributes="0"/>
+                              <EmptySpace min="-2" pref="27" max="-2" attributes="0"/>
                               <Group type="103" groupAlignment="3" attributes="0">
-                                  <Component id="jLabel26" alignment="3" min="-2" max="-2" attributes="0"/>
-                                  <Component id="variantFilterA" alignment="3" min="-2" max="-2" attributes="0"/>
+                                  <Component id="gnomadVcf" alignment="3" min="-2" max="-2" attributes="0"/>
+                                  <Component id="somaticWarning3" alignment="3" min="-2" pref="27" max="-2" attributes="0"/>
+                                  <Component id="browseGenomad" alignment="3" min="-2" max="-2" attributes="0"/>
                               </Group>
+                              <EmptySpace max="-2" attributes="0"/>
+                              <Group type="103" groupAlignment="3" attributes="0">
+                                  <Component id="dbsnpVCF" alignment="3" min="-2" max="-2" attributes="0"/>
+                                  <Component id="somaticWarning5" alignment="3" min="-2" pref="27" max="-2" attributes="0"/>
+                                  <Component id="browseDbsnp" alignment="3" min="-2" max="-2" attributes="0"/>
+                              </Group>
+                              <EmptySpace max="-2" attributes="0"/>
+                              <Group type="103" groupAlignment="3" attributes="0">
+                                  <Component id="clinvarVCF" alignment="3" min="-2" max="-2" attributes="0"/>
+                                  <Component id="somaticWarning6" alignment="3" min="-2" pref="27" max="-2" attributes="0"/>
+                                  <Component id="browseClinvar" alignment="3" min="-2" max="-2" attributes="0"/>
+                              </Group>
+                              <EmptySpace min="-2" pref="10" max="-2" attributes="0"/>
+                              <Component id="jSeparator4" min="-2" pref="10" max="-2" attributes="0"/>
                               <EmptySpace type="separate" max="-2" attributes="0"/>
+                              <Component id="somaticWarning2" min="-2" pref="27" max="-2" attributes="0"/>
+                              <EmptySpace min="-2" pref="14" max="-2" attributes="0"/>
                               <Component id="jLabel43" min="-2" max="-2" attributes="0"/>
                               <EmptySpace type="unrelated" max="-2" attributes="0"/>
                               <Group type="103" groupAlignment="0" attributes="0">
@@ -3827,7 +3915,13 @@
                               <Component id="jLabel35" min="-2" max="-2" attributes="0"/>
                               <EmptySpace max="-2" attributes="0"/>
                               <Component id="jScrollPane13" min="-2" pref="178" max="-2" attributes="0"/>
+                              <EmptySpace type="separate" max="32767" attributes="0"/>
+                              <Component id="somaticWarning4" min="-2" pref="27" max="-2" attributes="0"/>
                               <EmptySpace max="-2" attributes="0"/>
+                              <Group type="103" groupAlignment="3" attributes="0">
+                                  <Component id="jLabel26" alignment="3" min="-2" max="-2" attributes="0"/>
+                                  <Component id="variantFilterA" alignment="3" min="-2" max="-2" attributes="0"/>
+                              </Group>
                           </Group>
                       </Group>
                     </DimensionLayout>
@@ -3846,6 +3940,7 @@
                       </Properties>
                       <Events>
                         <EventHandler event="itemStateChanged" listener="java.awt.event.ItemListener" parameters="java.awt.event.ItemEvent" handler="jCheckBox5ItemStateChanged"/>
+                        <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="jCheckBox5ActionPerformed"/>
                       </Events>
                     </Component>
                     <Component class="javax.swing.JTextField" name="vepAssembly">
@@ -4203,7 +4298,7 @@
                         <Property name="foreground" type="java.awt.Color" editor="org.netbeans.beaninfo.editors.ColorEditor">
                           <Color blue="ff" green="ff" red="ff" type="rgb"/>
                         </Property>
-                        <Property name="text" type="java.lang.String" value="Variant Filteration  after Annotation (SnpSIFT):"/>
+                        <Property name="text" type="java.lang.String" value="2- Downstream Annotation &amp; Filtering (SnpSift):"/>
                       </Properties>
                     </Component>
                     <Component class="javax.swing.JTextField" name="filterExprB">
@@ -4385,7 +4480,7 @@
                         <Property name="foreground" type="java.awt.Color" editor="org.netbeans.beaninfo.editors.ColorEditor">
                           <Color blue="ff" green="ff" red="ff" type="rgb"/>
                         </Property>
-                        <Property name="text" type="java.lang.String" value="Filter String: Do not delete [SNPEFF] or [VEP] tags. Write/select your expressions directly below or beside each tag header."/>
+                        <Property name="text" type="java.lang.String" value="SnpSift Expression Filter:: Do not delete [SNPEFF] or [VEP] tags. Write/select your expressions directly below or beside each tag header."/>
                       </Properties>
                       <Events>
                         <EventHandler event="mouseClicked" listener="java.awt.event.MouseListener" parameters="java.awt.event.MouseEvent" handler="jLabel35MouseClicked"/>
@@ -4561,6 +4656,141 @@
                         </Property>
                         <Property name="text" type="java.lang.String" value="VariantFilteration:"/>
                       </Properties>
+                    </Component>
+                    <Component class="javax.swing.JLabel" name="somaticWarningLabel">
+                      <Properties>
+                        <Property name="font" type="java.awt.Font" editor="org.netbeans.beaninfo.editors.FontEditor">
+                          <Font name="Liberation Sans" size="14" style="1"/>
+                        </Property>
+                        <Property name="foreground" type="java.awt.Color" editor="org.netbeans.beaninfo.editors.ColorEditor">
+                          <Color blue="ff" green="ff" red="ff" type="rgb"/>
+                        </Property>
+                        <Property name="text" type="java.lang.String" value="VariantFilteration:"/>
+                      </Properties>
+                    </Component>
+                    <Component class="javax.swing.JLabel" name="somaticWarning2">
+                      <Properties>
+                        <Property name="font" type="java.awt.Font" editor="org.netbeans.beaninfo.editors.FontEditor">
+                          <Font name="Liberation Sans" size="14" style="1"/>
+                        </Property>
+                        <Property name="foreground" type="java.awt.Color" editor="org.netbeans.beaninfo.editors.ColorEditor">
+                          <Color blue="ff" green="ff" red="ff" type="rgb"/>
+                        </Property>
+                        <Property name="text" type="java.lang.String" value="Enter SNPSIFT ANNOTATION DATABASES (Population &amp; Clinical)"/>
+                      </Properties>
+                    </Component>
+                    <Component class="javax.swing.JSeparator" name="jSeparator1">
+                    </Component>
+                    <Component class="javax.swing.JSeparator" name="jSeparator2">
+                    </Component>
+                    <Component class="javax.swing.JSeparator" name="jSeparator3">
+                    </Component>
+                    <Component class="javax.swing.JLabel" name="jLabel22">
+                      <Properties>
+                        <Property name="font" type="java.awt.Font" editor="org.netbeans.beaninfo.editors.FontEditor">
+                          <Font name="Liberation Sans" size="18" style="1"/>
+                        </Property>
+                        <Property name="foreground" type="java.awt.Color" editor="org.netbeans.beaninfo.editors.ColorEditor">
+                          <Color blue="ff" green="ff" red="ff" type="rgb"/>
+                        </Property>
+                        <Property name="text" type="java.lang.String" value="1: Primary Functional Annotation"/>
+                      </Properties>
+                    </Component>
+                    <Component class="javax.swing.JLabel" name="somaticWarning3">
+                      <Properties>
+                        <Property name="font" type="java.awt.Font" editor="org.netbeans.beaninfo.editors.FontEditor">
+                          <Font name="Liberation Sans" size="14" style="1"/>
+                        </Property>
+                        <Property name="foreground" type="java.awt.Color" editor="org.netbeans.beaninfo.editors.ColorEditor">
+                          <Color blue="ff" green="ff" red="ff" type="rgb"/>
+                        </Property>
+                        <Property name="text" type="java.lang.String" value="gnomAD VCF:"/>
+                      </Properties>
+                    </Component>
+                    <Component class="javax.swing.JTextField" name="gnomadVcf">
+                      <Properties>
+                        <Property name="editable" type="boolean" value="false"/>
+                      </Properties>
+                    </Component>
+                    <Component class="javax.swing.JButton" name="browseGenomad">
+                      <Properties>
+                        <Property name="text" type="java.lang.String" value="..."/>
+                      </Properties>
+                      <Events>
+                        <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="browseGenomadActionPerformed"/>
+                      </Events>
+                    </Component>
+                    <Component class="javax.swing.JLabel" name="somaticWarning4">
+                      <Properties>
+                        <Property name="font" type="java.awt.Font" editor="org.netbeans.beaninfo.editors.FontEditor">
+                          <Font name="Liberation Sans" size="14" style="1"/>
+                        </Property>
+                        <Property name="foreground" type="java.awt.Color" editor="org.netbeans.beaninfo.editors.ColorEditor">
+                          <Color blue="ff" green="ff" red="ff" type="rgb"/>
+                        </Property>
+                        <Property name="text" type="java.lang.String" value="Variant Filteration  after Annotation (SnpSIFT):"/>
+                      </Properties>
+                    </Component>
+                    <Component class="javax.swing.JLabel" name="somaticWarning5">
+                      <Properties>
+                        <Property name="font" type="java.awt.Font" editor="org.netbeans.beaninfo.editors.FontEditor">
+                          <Font name="Liberation Sans" size="14" style="1"/>
+                        </Property>
+                        <Property name="foreground" type="java.awt.Color" editor="org.netbeans.beaninfo.editors.ColorEditor">
+                          <Color blue="ff" green="ff" red="ff" type="rgb"/>
+                        </Property>
+                        <Property name="text" type="java.lang.String" value="dbSNP VCF:"/>
+                      </Properties>
+                    </Component>
+                    <Component class="javax.swing.JTextField" name="dbsnpVCF">
+                      <Properties>
+                        <Property name="editable" type="boolean" value="false"/>
+                      </Properties>
+                    </Component>
+                    <Component class="javax.swing.JButton" name="browseDbsnp">
+                      <Properties>
+                        <Property name="text" type="java.lang.String" value="..."/>
+                      </Properties>
+                      <Events>
+                        <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="browseDbsnpActionPerformed"/>
+                      </Events>
+                    </Component>
+                    <Component class="javax.swing.JTextField" name="clinvarVCF">
+                      <Properties>
+                        <Property name="editable" type="boolean" value="false"/>
+                      </Properties>
+                    </Component>
+                    <Component class="javax.swing.JLabel" name="somaticWarning6">
+                      <Properties>
+                        <Property name="font" type="java.awt.Font" editor="org.netbeans.beaninfo.editors.FontEditor">
+                          <Font name="Liberation Sans" size="14" style="1"/>
+                        </Property>
+                        <Property name="foreground" type="java.awt.Color" editor="org.netbeans.beaninfo.editors.ColorEditor">
+                          <Color blue="ff" green="ff" red="ff" type="rgb"/>
+                        </Property>
+                        <Property name="text" type="java.lang.String" value="ClinVar VCF:"/>
+                      </Properties>
+                    </Component>
+                    <Component class="javax.swing.JButton" name="browseClinvar">
+                      <Properties>
+                        <Property name="text" type="java.lang.String" value="..."/>
+                      </Properties>
+                      <Events>
+                        <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="browseClinvarActionPerformed"/>
+                      </Events>
+                    </Component>
+                    <Component class="javax.swing.JLabel" name="somaticWarning7">
+                      <Properties>
+                        <Property name="font" type="java.awt.Font" editor="org.netbeans.beaninfo.editors.FontEditor">
+                          <Font name="Liberation Sans" size="14" style="1"/>
+                        </Property>
+                        <Property name="foreground" type="java.awt.Color" editor="org.netbeans.beaninfo.editors.ColorEditor">
+                          <Color blue="ff" green="ff" red="ff" type="rgb"/>
+                        </Property>
+                        <Property name="text" type="java.lang.String" value="Enter SNPSIFT ANNOTATION DATABASES (Population &amp; Clinical)"/>
+                      </Properties>
+                    </Component>
+                    <Component class="javax.swing.JSeparator" name="jSeparator4">
                     </Component>
                   </SubComponents>
                 </Container>

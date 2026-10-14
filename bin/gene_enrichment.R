@@ -3,7 +3,7 @@
 # Default Directory
 myargs = commandArgs(trailingOnly=TRUE)
 ################################################################################
-# myargs[1]="/home/iffy/PhD_Data/CASESTUDY/1-Hepatocellular_carcinoma_100/RNASeq_PRJNA867011/TestingDESeq2/"   # 1: Output Directory
+# myargs[1]="/mnt/ntfs/Genes_Metadata/MODERATE_Impact_Genes/CHD4_Output"   # 1: Output Directory
 # myargs[2]="/home/iffy/NetBeansProjects/NGSGradle/app/R_Libraries" # 2: Lib Path
 # myargs[3]="ENSEMBL" # 3: Form Type
 # myargs[4]="org.Hs.eg.db"#"org.Mm.eg.db" # 4: Organism DB
@@ -17,7 +17,7 @@ myargs = commandArgs(trailingOnly=TRUE)
 # myargs[10]=0.2  # 10: enrichGO q-value cutoff
 # 
 # myargs[11]="ALL"  # 11: gseGO sub
-# myargs[12]="none" # 12: gseGO p-adjust method
+# myargs[12]="BH" # 12: gseGO p-adjust method
 # myargs[13]=0.05 # 13: gseGO p-value cutoff
 # myargs[14] <- "fgsea" # 14: gseBy method
 # myargs[15]<- as.numeric(1e-10)  # 15: GSEA epsilon value
@@ -30,11 +30,11 @@ myargs = commandArgs(trailingOnly=TRUE)
 # myargs[19]="BH" # 19: FIXED: KEGG gse p-adjust (Changed from 'none' to 'BH')
 # myargs[20]=0.05 # 20: KEGG gse p-value cutoff
 # 
-# myargs[21]=1  # 21: mkeggPcutoff
-# myargs[22]=1  # 22: mkeggQcutoff
-# myargs[23]=1  # 23: gmkeggPcutoff
+# myargs[21]=0.05  # 21: mkeggPcutoff
+# myargs[22]=0.2  # 22: mkeggQcutoff
+# myargs[23]=0.05  # 23: gmkeggPcutoff
 # 
-# myargs[24]="deSeq2" #"edgeR" # # 24: Analysis type
+# myargs[24]="edgeR"#"deSeq2" #"edgeR" # # 24: Analysis type
 # filepath="/home/iffy/ssh_folder/Output/EdgeRResults/exactTest.csv"
 
 
@@ -263,24 +263,72 @@ geneSetAnalysis<-function(deGenes,folderN,analysis_type){
         cat("Warning: getBM query failed on live server. Tripping local fallback...\n")
         bm_res <- NULL
       })
-    }else {
+    }
+    #else 
+    # FALLBACK TRIGGER: Run if mart failed OR getBM returned NULL / empty dataframe
+    if (is.null(bm_res) || nrow(bm_res) == 0) {
       # LOCAL DATABASE FALLBACK VIA AN OR CONDITION EFFECT
       cat("\n[NOTICE] Ensembl web services failed! Swapping immediately to local database mapping via AnnotationDbi...\n")
       
       # Mirror the exact biomaRt system naming convention to match your code downstream
       dbi_map <- c(ensembl_gene_id = "ENSEMBL", hgnc_symbol = "SYMBOL", entrezgene_id = "ENTREZID", uniprotswissprot = "UNIPROT")
       
+      # Check valid keys in local database to avoid fatal .testForValidKeys error
+      db_obj <- get(organism)
+      valid_db_keys <- AnnotationDbi::keys(db_obj, keytype = dbi_map[[fromAttr]])
+      valid_keys <- intersect(deGenes$genes, valid_db_keys)
+      missing_keys <- setdiff(deGenes$genes, valid_db_keys)
+      if (length(missing_keys) > 0) {
+        cat(sprintf("[NOTICE] %d gene(s) not found in local AnnotationDbi database (%s).\n", 
+                    length(missing_keys), organism))
+        if (length(valid_keys) == 0) {
+          stop("[WARNING] NONE of the input genes exist in the local AnnotationDbi database!\n")
+        }
+      }
+      
+      if (length(valid_keys) > 0) {
       # Select locally using your preset variables
       local_res <- suppressMessages(AnnotationDbi::select(
-        get(organism), 
-        keys    = deGenes$genes, 
-        columns = dbi_map[toAttrs], 
-        keytype = dbi_map[[fromAttr]]
+      get(organism),
+       keys    = deGenes$genes,
+       columns = dbi_map[toAttrs],
+       keytype = dbi_map[[fromAttr]]
       ))
+      } else {
+        # Create an empty dataframe with correct structure if no valid keys exist locally
+        col_names <- c(dbi_map[[fromAttr]], dbi_map[toAttrs])
+        local_res <- setNames(data.frame(matrix(ncol = length(col_names), nrow = 0)), col_names)
+      }
+      
+      # 2. Extract keytype and columns as plain, un-named character vectors
+      # curr_keytype <- unname(dbi_map[fromAttr])
+      # curr_columns <- unname(dbi_map[toAttrs])
+      # 
+      # # 3. Clean vector of keys (filter out NAs and empty strings; IDs already version-truncated)
+      # query_keys <- as.character(deGenes$genes)
+      # query_keys <- unique(query_keys[!is.na(query_keys) & query_keys != ""])
+      # 
+      # # 4. CRITICAL: AnnotationDbi requires the keytype itself to be inside 'columns'
+      # query_columns <- unique(c(curr_keytype, curr_columns))
+      # 
+      # # 5. Execute select safely using the active OrgDb object
+      # org_db <- get(organism) # e.g., org.Hs.eg.db
+      # 
+      # local_res <- suppressMessages(
+      #   AnnotationDbi::select(
+      #     x       = org_db,
+      #     keys    = query_keys,
+      #     columns = query_columns,
+      #     keytype = curr_keytype
+      #   )
+      # )
       
       # Invert map to translate standard uppercase DBI columns back into your specific lowercase strings
       inv_map <- names(dbi_map); names(inv_map) <- dbi_map
       colnames(local_res) <- inv_map[colnames(local_res)]
+   
+      # Deduplicate columns if any match
+      #local_res <- local_res[, !duplicated(colnames(local_res)), drop = FALSE]
       
       # Force columns into the exact layout sequence your code handles next
       bm_res <- local_res[, c(fromAttr, toAttrs), drop = FALSE]
@@ -358,8 +406,8 @@ geneSetAnalysis<-function(deGenes,folderN,analysis_type){
   # 3. CORRECT DEDUPLICATION: Deduplicate by your input gene column
    deduplicated_res <- bm_res[!duplicated(bm_res[[fromAttr]]), ]
    
-   cat("Rows after input gene deduplication:", nrow(deduplicated_res), "\n")
-  print(deduplicated_res)
+   cat("Rows after input gene deduplication(Top 10):", nrow(deduplicated_res), "\n")
+  print(head(deduplicated_res,10))
   
   #Creating a new dataframe along with all the columns as per mapped genes
   # Subset deGenes based on matching  frmType IDs in duplicate_ids
@@ -725,7 +773,7 @@ geneSetAnalysis<-function(deGenes,folderN,analysis_type){
 
   cat("============================================================\n\n")
 
-  # print("3: STARTING GO GENE SET ENRICHMENT ANALYSIS (gseGO)")
+   print("3: STARTING GO GENE SET ENRICHMENT ANALYSIS (gseGO)")
   # gse <- gseGO(geneList=geneList,
   #              ont =gseSub, # BP,MF,CC,ALL
   #              pvalueCutoff = gsePcutoff,
@@ -1320,14 +1368,24 @@ geneSetAnalysis<-function(deGenes,folderN,analysis_type){
   
   
   # Fetch all valid KEGG module genes for your organism via KEGGREST API
-  kegg_ids <- KEGGREST::keggLink(org, "module")
+  kegg_ids <- tryCatch({
+    KEGGREST::keggLink(org, "module")
+  }, error = function(e) {
+    message("[NETWORK ERROR] Failed to reach rest.kegg.jp: ", e$message)
+    return(NULL)
+  })
+  
+  if (!is.null(kegg_ids)) {
   # Crucial Change: Use bg_geneList (the 20,000 background genes) for GSEA validation!
   formatted_query_ids <- paste0(org, ":", names(geneList))
   all_kegg_genes      <- unname(kegg_ids)
   # Validate your bg_geneList entries against the official database
   valid_ids <- formatted_query_ids %in% all_kegg_genes
   cat("Number of background geneList entries mapping to KEGG Modules: ", sum(valid_ids), "out of", length(geneList), "\n")
-  
+  } else {
+    valid_ids <- FALSE
+    cat("[WARNING] Could not fetch KEGG module mappings due to network error. Skipping validation.\n")
+  }
   
   
   # kegg_ids <- KEGGREST::keggLink(org, "module")  # or pathway if you're doing enrichKEGG
@@ -1383,9 +1441,10 @@ geneSetAnalysis<-function(deGenes,folderN,analysis_type){
                   axis.text.y  = element_text(size = 8.5),
                   plot.margin = unit(c(0.5, 0.5, 0.5, 0.5), "cm")))
     invisible(dev.off())
-    
+    tryCatch({
     x2 <- enrichplot::pairwise_termsim(mkk2) 
-    cat("\nGenerating gseMKEGG_EMAPPlot.png\n")
+    if (!is.null(x2) && nrow(as.data.frame(x2)) > 1) {
+      cat("\nGenerating gseMKEGG_EMAPPlot.png\n")
     CairoPNG(file = "gseMKEGG_EMAPPlot.png", width = 14, height = 9, units = "in", res = 300)
     
     # Generate your exact original plot cleanly—no hidden layer modifications
@@ -1402,10 +1461,17 @@ geneSetAnalysis<-function(deGenes,folderN,analysis_type){
     )
     
     invisible(dev.off())
-    
+    } else {
+      cat("EMAPPlot skipped: Insufficient terms (<2) to build a similarity network graph.\n")
+    }
+    }, error = function(e) {
+      cat("[WARNING] EMAPPlot failed due to node layout issue: ", e$message, "\n")
+      if (dev.cur() > 1) dev.off()
+    })
     
       
     cat("\nGenerating gseMKEGG_GseaPlot.png\n")
+    
     CairoPNG(file ="gseMKEGG_GseaPlot.png",width = 12, height = 8, units = "in", res = 300)
     
     plotList<-list()
@@ -1743,9 +1809,35 @@ if(analysis == "deSeq2")
   global_raw_list <- readRDS("gsea_geneList.RDS") 
   
   folderN<-"DeSeqResults"
-  dir.create(file.path(myargs[1], "DeSeqResults/GeneEnrich_Results"))
-  setwd(file.path(myargs[1], folderN, "GeneEnrich_Results"))
-  geneSetAnalysis(deGenes,folderN,"deSeq2")
+  base_dir <- file.path(myargs[1], folderN, "GeneEnrich_Results")
+  
+  # --- SPLIT INTO UP & DOWN ---
+  deGenes_UP   <- deGenes[deGenes$log2FoldChange > 0, ]
+  deGenes_DOWN <- deGenes[deGenes$log2FoldChange < 0, ]
+  
+  cat(sprintf("\n=======================================================\n"))
+  cat(sprintf("[DESeq2] Found %d total DE genes\n", nrow(deGenes)))
+  cat(sprintf("  --> Upregulated targets  : %d genes (log2FC > 0)\n", nrow(deGenes_UP)))
+  cat(sprintf("  --> Downregulated targets: %d genes (log2FC < 0)\n", nrow(deGenes_DOWN)))
+  cat(sprintf("=======================================================\n"))
+  
+  # Run UP-regulated inside GeneEnrich_Results/Upregulated
+  cat("\nExecuting enrichment analysis for Upregulated genes...\n")
+  dir.create(file.path(base_dir, "Upregulated"), recursive = TRUE, showWarnings = FALSE)
+  setwd(file.path(base_dir, "Upregulated"))
+  geneSetAnalysis(deGenes_UP, folderN, "deSeq2")
+  cat("Completed Upregulated gene enrichment.\n")
+  
+  # Run DOWN-regulated inside GeneEnrich_Results/Downregulated
+  cat("\nExecuting enrichment analysis for Downregulated genes...\n")
+  dir.create(file.path(base_dir, "Downregulated"), recursive = TRUE, showWarnings = FALSE)
+  setwd(file.path(base_dir, "Downregulated"))
+  geneSetAnalysis(deGenes_DOWN, folderN, "deSeq2")
+  cat("Completed Downregulated gene enrichment.\n")
+  
+  #dir.create(file.path(myargs[1], "DeSeqResults/GeneEnrich_Results"))
+  #setwd(file.path(myargs[1], folderN, "GeneEnrich_Results"))
+  #geneSetAnalysis(deGenes,folderN,"deSeq2")
 }else if (analysis == "edgeR"){
   #deGenes <-read.csv(filepath,sep = "\t", header = TRUE)
   setwd(file.path(myargs[1])) 
@@ -1759,10 +1851,35 @@ if(analysis == "deSeq2")
   cat(sprintf("\n[GSEA INITIALIZATION] Loading edgeR global background landscape profile from: %s\n", basename(gsea_matches[1])))
   global_raw_list <- readRDS(gsea_matches[1])
   
-  dir.create(file.path(myargs[1], "EdgeRResults/GeneEnrich_Results"))
+  base_dir <- file.path(myargs[1], folderN, "GeneEnrich_Results")
   
-  setwd(file.path(myargs[1], folderN, "GeneEnrich_Results"))
-  geneSetAnalysis(deGenes,folderN,"edgeR")
+  # --- SPLIT INTO UP & DOWN ---
+  deGenes_UP   <- deGenes[deGenes$logFC > 0, ]
+  deGenes_DOWN <- deGenes[deGenes$logFC < 0, ]
+  
+  cat(sprintf("\n=======================================================\n"))
+  cat(sprintf("[edgeR] Found %d total DE genes\n", nrow(deGenes)))
+  cat(sprintf("  --> Upregulated targets  : %d genes (logFC > 0)\n", nrow(deGenes_UP)))
+  cat(sprintf("  --> Downregulated targets: %d genes (logFC < 0)\n", nrow(deGenes_DOWN)))
+  cat(sprintf("=======================================================\n"))
+  
+  cat("\nExecuting enrichment analysis for Upregulated genes...\n")
+  # Run UP-regulated inside GeneEnrich_Results/Upregulated
+  dir.create(file.path(base_dir, "Upregulated"), recursive = TRUE, showWarnings = FALSE)
+  setwd(file.path(base_dir, "Upregulated"))
+  geneSetAnalysis(deGenes_UP, folderN, "edgeR")
+  cat("Completed Upregulated gene enrichment.\n")
+  
+  # Run DOWN-regulated inside GeneEnrich_Results/Downregulated
+  cat("\nExecuting enrichment analysis for Downregulated genes...\n")
+  dir.create(file.path(base_dir, "Downregulated"), recursive = TRUE, showWarnings = FALSE)
+  setwd(file.path(base_dir, "Downregulated"))
+  geneSetAnalysis(deGenes_DOWN, folderN, "edgeR")
+  cat("Completed Downregulated gene enrichment.\n")
+  
+  #dir.create(file.path(myargs[1], "EdgeRResults/GeneEnrich_Results"))
+  #setwd(file.path(myargs[1], folderN, "GeneEnrich_Results"))
+  #geneSetAnalysis(deGenes,folderN,"edgeR")
 }else if (analysis == "both"){
   
   for(i in 1:2){
@@ -1772,9 +1889,36 @@ if(analysis == "deSeq2")
       folderN<-"DeSeqResults"
       cat("\n[GSEA INITIALIZATION] Loading global background landscape profile...\n")
       global_raw_list <- readRDS("gsea_geneList.RDS") 
-      dir.create(file.path(myargs[1], "DeSeqResults/GeneEnrich_Results"))
-      setwd(file.path(myargs[1], folderN, "GeneEnrich_Results"))
-      geneSetAnalysis(deGenes,folderN,"deSeq2")
+      
+      base_dir <- file.path(myargs[1], folderN, "GeneEnrich_Results")
+      
+      # --- SPLIT INTO UP & DOWN ---
+      deGenes_UP   <- deGenes[deGenes$log2FoldChange > 0, ]
+      deGenes_DOWN <- deGenes[deGenes$log2FoldChange < 0, ]
+      
+      cat(sprintf("\n=======================================================\n"))
+      cat(sprintf("[DESeq2] Found %d total DE genes\n", nrow(deGenes)))
+      cat(sprintf("  --> Upregulated targets  : %d genes (log2FC > 0)\n", nrow(deGenes_UP)))
+      cat(sprintf("  --> Downregulated targets: %d genes (log2FC < 0)\n", nrow(deGenes_DOWN)))
+      cat(sprintf("=======================================================\n"))
+      
+      # Run UP-regulated inside GeneEnrich_Results/Upregulated
+      cat("\nExecuting enrichment analysis for Upregulated genes...\n")
+      dir.create(file.path(base_dir, "Upregulated"), recursive = TRUE, showWarnings = FALSE)
+      setwd(file.path(base_dir, "Upregulated"))
+      geneSetAnalysis(deGenes_UP, folderN, "deSeq2")
+      cat("Completed Upregulated gene enrichment.\n")
+      
+      # Run DOWN-regulated inside GeneEnrich_Results/Downregulated
+      cat("\nExecuting enrichment analysis for Downregulated genes...\n")
+      dir.create(file.path(base_dir, "Downregulated"), recursive = TRUE, showWarnings = FALSE)
+      setwd(file.path(base_dir, "Downregulated"))
+      geneSetAnalysis(deGenes_DOWN, folderN, "deSeq2")
+      cat("Completed Downregulated gene enrichment.\n")
+      
+      #dir.create(file.path(myargs[1], "DeSeqResults/GeneEnrich_Results"))
+      #setwd(file.path(myargs[1], folderN, "GeneEnrich_Results"))
+      #geneSetAnalysis(deGenes,folderN,"deSeq2")
     }else if (i==2){
       deGenes <-  readRDS("degenesE.RDS")
       folderN<-"EdgeRResults"
@@ -1785,9 +1929,34 @@ if(analysis == "deSeq2")
       
       cat(sprintf("\n[GSEA INITIALIZATION] Loading edgeR global background landscape profile from: %s\n", basename(gsea_matches[1])))
       global_raw_list <- readRDS(gsea_matches[1])
-      dir.create(file.path(myargs[1], "EdgeRResults/GeneEnrich_Results"))
-      setwd(file.path(myargs[1], folderN, "GeneEnrich_Results"))
-      geneSetAnalysis(deGenes,folderN,"edgeR")
+      base_dir <- file.path(myargs[1], folderN, "GeneEnrich_Results")
+      
+      # --- SPLIT INTO UP & DOWN ---
+      deGenes_UP   <- deGenes[deGenes$logFC > 0, ]
+      deGenes_DOWN <- deGenes[deGenes$logFC < 0, ]
+      
+      cat(sprintf("\n=======================================================\n"))
+      cat(sprintf("[edgeR] Found %d total DE genes\n", nrow(deGenes)))
+      cat(sprintf("  --> Upregulated targets  : %d genes (logFC > 0)\n", nrow(deGenes_UP)))
+      cat(sprintf("  --> Downregulated targets: %d genes (logFC < 0)\n", nrow(deGenes_DOWN)))
+      cat(sprintf("=======================================================\n"))
+      
+      # Run UP-regulated inside GeneEnrich_Results/Upregulated
+      cat("\nExecuting enrichment analysis for Upregulated genes...\n")
+      dir.create(file.path(base_dir, "Upregulated"), recursive = TRUE, showWarnings = FALSE)
+      setwd(file.path(base_dir, "Upregulated"))
+      geneSetAnalysis(deGenes_UP, folderN, "edgeR")
+      cat("Completed Upregulated gene enrichment.\n")
+      
+      # Run DOWN-regulated inside GeneEnrich_Results/Downregulated
+      cat("\nExecuting enrichment analysis for Downregulated genes...\n")
+      dir.create(file.path(base_dir, "Downregulated"), recursive = TRUE, showWarnings = FALSE)
+      setwd(file.path(base_dir, "Downregulated"))
+      geneSetAnalysis(deGenes_DOWN, folderN, "edgeR")
+      cat("Completed Downregulated gene enrichment.\n")
+      #dir.create(file.path(myargs[1], "EdgeRResults/GeneEnrich_Results"))
+      #setwd(file.path(myargs[1], folderN, "GeneEnrich_Results"))
+      #geneSetAnalysis(deGenes,folderN,"edgeR")
     }
     
   }

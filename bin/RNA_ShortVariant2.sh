@@ -1,6 +1,8 @@
 #!/usr/bin/bash
 #set -x 
-#################################### PARAMETERS
+#==================================================================================================
+#                                           PARAMETERS
+#==================================================================================================
 STAR_PATH="${1}"
 PICARD_PATH="${2}"
 GATK_PATH="${3}"
@@ -11,17 +13,16 @@ R_LIBS="${6}"
 BamFilesPath="${7}" #Array of paths
 REFERENCE="${8}"
 OUTPUT_DIR="${9}"
+
 KNOWN_SITES="${10}"  #Variants in dbSNP database
 addReplaceGroups="${11}" #Array of comma seperated values 
 SplitOption="${12}"  #YES,NO
 HaploOption="${13}"  #SINGLEMODE,JOINTMODE
 HaploInterval="${14}"   #either file, or either mannual interval
 Thread="${15}"
-
+# 16-19 for Variant Annotation
 annotationOPtion="${16}"	#snpeff,vep,both
-
-
-# 15-17 for Variant Annotation 
+ 
 if [ "$annotationOPtion" = "snpeff" ]; then
 snpEff_db="${17}" # hg38 or hg19    GRCh37.75
 elif [ "$annotationOPtion" = "vep" ]; then
@@ -45,35 +46,53 @@ filterOptionsA="${23}" #Sift Filtering (After)
 germSomaticOP="${24}" #Option for GERMLINE or SOMATIC or BOTH
 somaticOP="${25}"  #Somatic Options: TUMORN, TUMORM, TUMORO, TUMORMIT,TUMORFOR
 
-# 24-26 or 24-29 or 24-32
+ANNOT_GNOMAD="${26}"
+ANNOT_DBSNP="${27}"
+ANNOT_CLINVAR="${28}"
+
+# 24-26 or 24-29 or 24-32--changed: 29-31 or
 if [ "$germSomaticOP" = "GERMLINE" ]; then
-    ERC="${26}" #ERC*
-    G1="${27}"
-    bamout="${28}"
+    ERC="${29}" #ERC*
+    G1="${30}"
+    bamout="${31}"
     
 elif [ "$germSomaticOP" = "SOMATIC" ]; then
-    TumorNormalData="${26}" #Array of Tumor#Normal pairs separated by Comma
-    germlineResource="${27}"
-    PON="${28}"
-    allele="${29}"
-    f1r2="${30}"
-    genomicInterval="${31}"
-    
-elif [ "$germSomaticOP" = "BOTH" ]; then
-    ERC="${26}" #ERC*
-    G1="${27}"
-    bamout="${28}"
-    
-    TumorNormalData="${29}" #Array of normal paths & name comma separated
+    TumorNormalData="${29}" #Array of Tumor#Normal pairs separated by Comma
     germlineResource="${30}"
     PON="${31}"
     allele="${32}"
     f1r2="${33}"
     genomicInterval="${34}"
+    
+elif [ "$germSomaticOP" = "BOTH" ]; then
+    ERC="${29}" #ERC*
+    G1="${30}"
+    bamout="${31}"
+    
+    TumorNormalData="${32}" #Array of normal paths & name comma separated
+    germlineResource="${33}"
+    PON="${34}"
+    allele="${35}"
+    f1r2="${36}"
+    genomicInterval="${37}"
 fi
-############################################ END PARAMETERS
 
-# Helper function to extract the active filter from $filterOptionsA
+
+TempOutputDir="/mnt/ntfs/Output_WES/"
+
+GATK_MEM="-Xmx12G"
+TMP_DIR="${OUTPUT_DIR}gatk_tmp"
+mkdir -p "$TMP_DIR"
+
+#==================================================================================================
+#                                   END  PARAMETERS
+#==================================================================================================
+
+#==================================================================================================
+#                                  HELPER FUNCTIONS
+#==================================================================================================
+# FUNCTION 01: to extract the active filter from $filterOptionsA
+ 
 get_active_filter() {
     raw_input="$1"
     target_tag="$2" # "SNPEFF" or "VEP"
@@ -98,8 +117,10 @@ get_active_filter() {
 
     echo "$extracted"
 }
-###########################################
-# Function definition and calls
+
+#==================================================================================================
+# FUNCTION 02: 
+ 
 append_total_summary() {
     local target_file="$1"
     if [ -f "$target_file" ] && [ $(wc -l < "$target_file") -gt 1 ]; then
@@ -129,7 +150,9 @@ append_total_summary() {
         }' "$target_file" >> "$target_file"
     fi
 }
-### CREATE LOG FILE
+#==================================================================================================
+# LOG FILE CREATION FOR VARIANT CALLING STEPS
+
 PIPELINE_STATUS_FILE="${OUTPUT_DIR}/VariantPipeline_status.txt"
 
 # Create the file if it doesn't exist
@@ -140,8 +163,9 @@ if [ ! -f "$PIPELINE_STATUS_FILE" ]; then
         exit 1
     fi
 fi
+#==================================================================================================
+# FUNCTION 03: PIPELINE STATUS-KEEPS RECORD OF STEPS EXECUTED OR NOT
 
-###	FUNCTION: Pipeline_Status
 update_pipeline_status() {
     BAMFILE_NAME="$1"
     stage="$2"
@@ -154,20 +178,23 @@ update_pipeline_status() {
     fi
 }
 
+#==================================================================================================
+# CHECKING DICTIONARY FILE FOR REFERENCE. IF NOT PRESENT CREAT IT CreateSequenceDictionary
+
 DICT_FILE="${REFERENCE%.*}.dict"
 
 if [ ! -f "$DICT_FILE" ]; then
 cd $GATK_PATH
     echo "Sequence dictionary (.dict) not found. Creating now..."
 	#CorrectionDone- Uncomment it later on
-   # ./gatk CreateSequenceDictionary -R "$REFERENCE"
+    ./gatk CreateSequenceDictionary -R "$REFERENCE"
 else
     echo "Sequence dictionary (.dict) already exists."
 fi
 
-############################################################
+#==================================================================================================
 # Step 1: Check Read Groups present or not (.bam--->add.bam)
-############################################################
+#==================================================================================================
 
 echo "Checking ReadGroups..."
 
@@ -238,9 +265,9 @@ echo "java -jar $PICARD_PATH AddOrReplaceReadGroups -I "${bampath}" -O "${OUTPUT
 fi #End FileCheck
 done
 
-############################################################################################################################
-#Step 2: MarkDuplicates (.add.bam ----> dedup.bam, .metrices)
-############################################################################################################################
+#==================================================================================================
+#	Step 2: MarkDuplicates (.add.bam ----> dedup.bam, .metrices)
+#==================================================================================================
 
 echo "Running MarkDuplicates..."
 for bampath in $(echo $BamFilesPath | sed "s/,/ /g")
@@ -281,9 +308,9 @@ fi
 done
 echo "++++++++++++++++++++++++++++++++++++ MarkDuplicates COMPLETED +++++++++++++++++++++++++++++++++++++++++"
 
-############################################################################################################################
-#Step 3: Building BAM Index using Picard (.dedup.bam ---> .dedup.bai)
-############################################################################################################################
+#==================================================================================================
+# Step 3: Building BAM Index using Picard (.dedup.bam ---> .dedup.bai)
+#==================================================================================================
 
 echo "Running BuildBamIndex..."
 for bampath in $(echo $BamFilesPath | sed "s/,/ /g")
@@ -389,7 +416,10 @@ fi
 #./gatk --java-options "-Xmx4G -DGATK_STACKTRACE_ON_USER_EXCEPTION=true" IndexFeatureFile -I "${KNOWN_SITE1}"
 
 ################## BaseRecalibrator  (*.split.bam,*.vcf --> *.recal_data.table )
-################## ApplyBQSR (*.split.bam, *.recal_data.table  --> *.recal_reads.bam,*.recal_reads.bai) 
+################## BaseRecalibrator  (*.dedup.bam,*.dedup.bai,*.metrices,*.vcf --> *.recal_data.table )
+
+
+################## ApplyBQSR (*.split.bam or *.dedup.bam, *.recal_data.table  --> *.recal_reads.bam,*.recal_reads.bai) 
 
 echo "Running BaseRecalibrator & ApplyBQSR..."
 
@@ -547,30 +577,34 @@ echo "++++++++++++++++++++++++++++++++++++ AnalyzeCovariates COMPLETED +++++++++
 
 
 if [ "$germSomaticOP" = "GERMLINE" ]; then
-echo "Running HaplotypeCaller..."
-
-
+	echo "========================================================================"
+	echo " Running HaplotypeCaller Pipeline (Mode: $HaploOption)"
+	echo " Interval Target: ${HaploInterval:-'Whole Genome (WGS - No Interval)'}"
+	echo "========================================================================"
 	#STEP 7: HaplotypeCaller: Call germline SNPs and indels via local re-assembly of haplotypes 
 	for bampath in $(echo $BamFilesPath | sed "s/,/ /g")
 	do
+		
 		filename=$(basename "$bampath") 
 		BAMFILE_NAME=$(echo "$filename" | sed -E 's/(\.star\.Aligned\.sortedByCoord\.out)?\.bam$//') 
-		haplotype_cmd="./gatk --java-options \"-Xms4G -Xmx12G\" HaplotypeCaller -I "${OUTPUT_DIR}${BAMFILE_NAME}.recal_reads.bam" -R "${REFERENCE}" -O "${OUTPUT_DIR}""${BAMFILE_NAME}_ghap.vcf.gz" -ERC "$ERC" --native-pair-hmm-threads ${Thread}"
+		haplotype_cmd="./gatk --java-options \"-Xms4G -Xmx12G\" HaplotypeCaller -I "${OUTPUT_DIR}${BAMFILE_NAME}.recal_reads.bam" -R "${REFERENCE}" -O "${OUTPUT_DIR}""${BAMFILE_NAME}_ghap.vcf.gz" -ERC "$ERC" -G StandardAnnotation -G AS_StandardAnnotation --native-pair-hmm-threads ${Thread}"
+		
+		# Add interval target if provided
+		if [ -n "$HaploInterval" ]; then
+			haplotype_cmd="$haplotype_cmd $HaploInterval --interval-padding 100"
+		fi
+		
 		#Single-sample GVCF calling with allele-specific annotations
-
 		if [ -n "$G1" ]; then
 		haplotype_cmd="$haplotype_cmd $G1"
 		fi
 
 		#Variant calling with bamout to show realigned reads
-
 		if [ -n "$bamout" ]; then
 		haplotype_cmd="$haplotype_cmd -bamout $bamout"
 		fi
+
 		#Single-sample GVCF calling (outputs intermediate GVCF)
-
-
-		#Check for File already exist or Not .add.bam
 		happ_vcf="${OUTPUT_DIR}""${BAMFILE_NAME}_ghap.vcf.gz"
 		hap_vcf="${OUTPUT_DIR}""${BAMFILE_NAME}_hap.vcf.gz"
 
@@ -578,10 +612,6 @@ echo "Running HaplotypeCaller..."
 		if grep -q "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" && grep "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" | grep -q "|${stage}"; then
 			# If both sample and stage exist in the file
 			echo "$BAMFILE_NAME: $stage already done. Skipping HaplotypeCaller..."
-			##########################################
-			#Temp CODE
-
-			#################################################
 		else
 
 			echo "HaplotypeCaller Command: $haplotype_cmd"
@@ -591,7 +621,7 @@ echo "Running HaplotypeCaller..."
 			if [ $hap_status -eq 0 ] && [ -s "$happ_vcf" ]; then 
 				update_pipeline_status "$BAMFILE_NAME" "HaplotypeCaller"
 				
-				if [ $HaploOption = "SINGLEMODE" ];
+				if [ "$HaploOption" = "SINGLEMODE" ];
 				then
 					stage="GenotypeGVCFs"
 					if grep -q "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" && grep "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" | grep -q "|${stage}"; 
@@ -600,15 +630,21 @@ echo "Running HaplotypeCaller..."
 						echo "$BAMFILE_NAME: $stage already done. Skipping GenotypeGVCFs..."
 					
 					else
-						echo "Running GenotypeGVCFs for $BAMFILE_NAME : "
-						./gatk --java-options "-Xms4G -Xmx18G" GenotypeGVCFs -R "$REFERENCE" -V "${OUTPUT_DIR}${BAMFILE_NAME}_ghap.vcf.gz" -O "${OUTPUT_DIR}${BAMFILE_NAME}_hap.vcf.gz"
+						echo "Running GenotypeGVCFs (SINGLEMODE) for $BAMFILE_NAME : "
+						genotype_cmd="./gatk --java-options "-Xms4G -Xmx18G" GenotypeGVCFs -R "$REFERENCE" -V "${OUTPUT_DIR}${BAMFILE_NAME}_ghap.vcf.gz" -G StandardAnnotation -G AS_StandardAnnotation -O "${OUTPUT_DIR}${BAMFILE_NAME}_hap.vcf.gz""
+							
+							if [ -n "$HaploInterval" ]; then
+								genotype_cmd="$genotype_cmd $HaploInterval"
+							fi
+						echo "GenotypeGVCFs CMD: $genotype_cmd"
+						eval "$genotype_cmd"	
 						genotype_status=$?
 						
 							if [ $genotype_status -eq 0 ] && [ -s "$hap_vcf" ]; then 
 								update_pipeline_status "$BAMFILE_NAME" "GenotypeGVCFs"
 								echo "GenotypeGVCFs completed successfully."
-								echo "DEBUG: NOT Deleting intermediate files:"
-								#rm -f "$happ_vcf"
+								
+								rm -f "$happ_vcf"
 							else
 								echo "Error: GenotypeGVCFs failed or output VCF ($hap_vcf) is invalid or not indexed properly."
 								exit 1
@@ -628,43 +664,71 @@ echo "Running HaplotypeCaller..."
 		fi
 	done
 
-if [ $HaploOption = "JOINTMODE" ];
-then
-	BAMFILE_NAME="joint"
-	# List all _hap.vcf.gz files in the specified directory
-	# 1- Define GenomicsDB workspace directory
+	if [ "$HaploOption" = "JOINTMODE" ];
+	then
+		BAMFILE_NAME="joint"
+		# List all _hap.vcf.gz files in the specified directory
+		# 1- Define GenomicsDB workspace directory
 		DB_PATH="$OUTPUT_DIR/genomicsdb"
 
-	# 2- Creating a map file	
-	GVCF_LIST="$OUTPUT_DIR/gvcf_map.txt"
-
-	if [ ! -s "$GVCF_LIST" ]; then
-		for f in "$OUTPUT_DIR"/*_ghap.vcf.gz; do
-			sample=$(basename "$f" _ghap.vcf.gz)
-			echo -e "$sample\t$f" >> "$GVCF_LIST"
+		# 2- Creating a map file	
+		GVCF_LIST="$OUTPUT_DIR/gvcf_map.txt"
+		echo "------------------------------------------------------------------------"
+		echo " Starting Joint Variant Calling Pipeline"
+		echo "------------------------------------------------------------------------"
+	
+		# Correction: Always clear/rebuild the map from current BAMs
+		> "$GVCF_LIST"
+		for bampath in $(echo $BamFilesPath | sed "s/,/ /g")
+		do
+    		filename=$(basename "$bampath")
+    		sample=$(echo "$filename" | sed -E 's/(\.star\.Aligned\.sortedByCoord\.out)?\.bam$//')
+    		gvcf_path="${OUTPUT_DIR}${sample}_ghap.vcf.gz"
+    
+    		if [ -s "$gvcf_path" ]; then
+        		echo -e "${sample}\t${gvcf_path}" >> "$GVCF_LIST"
+    		else
+        		echo "Error: GVCF file for $sample ($gvcf_path) is missing or empty."
+       			 exit 1
+    		fi
 		done
-	else
-		echo "Map File $GVCF_LIST already exists. Skipping creation."
-	fi
+		
+		
+		#if [ ! -s "$GVCF_LIST" ]; then
+		#	for f in "$OUTPUT_DIR"/*_ghap.vcf.gz; do
+		#		sample=$(basename "$f" _ghap.vcf.gz)
+		#		echo -e "$sample\t$f" >> "$GVCF_LIST"
+		#	done
+		#else
+		#	echo "Map File $GVCF_LIST already exists. Skipping creation."
+		#fi
 	
-	echo "Running GenomicsDBImport + GenotypeGVCFs..."
+		echo "Running GenomicsDBImport + GenotypeGVCFs..."
+		#Changed:  Generate a unique hash based on the content of the current sample map
+		MAP_HASH=$(md5sum "$GVCF_LIST" | cut -d' ' -f1)
+		DB_PATH="$OUTPUT_DIR/genomicsdb_${MAP_HASH}"
+		
+		#3- Check GenomicsDBImport in Status or not
+		stage="GenomicsDBImport"
+		if grep -q "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" && grep "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" | grep -q "|${stage}"; then
 	
-	#3- Check GenomicsDBImport in Status or not
-	stage="GenomicsDBImport"
-	if grep -q "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" && grep "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" | grep -q "|${stage}"; then
-	
-		if [ -d "$DB_PATH" ] && [ -f "$DB_PATH/callset.json" ] && [ -f "$DB_PATH/vidmap.json" ] && [ -f "$DB_PATH/vcfheader.vcf" ] ; then
-			echo "GenomicsDB workspace already exists at $DB_PATH"
-			echo "Skipping GenomicsDBImport..."
-		else
-			echo "Error: GenomicsDBImport is recorded in the status file, but one or more required files are missing ($DB_PATH, $DB_PATH/callset.json, $DB_PATH/vidmap.json, $DB_PATH/vcfheader.vcf)."
-			exit 1
-		fi
+			if [ -d "$DB_PATH" ] && [ -f "$DB_PATH/callset.json" ] && [ -f "$DB_PATH/vidmap.json" ] && [ -f "$DB_PATH/vcfheader.vcf" ] ; then
+				echo "GenomicsDB workspace already exists at $DB_PATH"
+				echo "Skipping GenomicsDBImport..."
+			else
+				echo "Error: GenomicsDBImport is recorded in the status file, but one or more required files are missing ($DB_PATH, $DB_PATH/callset.json, $DB_PATH/vidmap.json, $DB_PATH/vcfheader.vcf)."
+				exit 1
+			fi
 
-	else
-		echo ">>> Running GenomicsDBImport..."
-		./gatk --java-options "-Xms4g -Xmx18g" GenomicsDBImport --genomicsdb-workspace-path "$DB_PATH" --batch-size 50 --sample-name-map "${GVCF_LIST}" --reader-threads ${Thread} ${HaploInterval}
-		genomic_status=$?
+		else
+			echo ">>> Running GenomicsDBImport..."
+			genomicsdb_cmd="./gatk --java-options "-Xms4g -Xmx18g" GenomicsDBImport --genomicsdb-workspace-path "$DB_PATH" --batch-size 50 --sample-name-map "${GVCF_LIST}" --reader-threads ${Thread} ${HaploInterval}"
+			if [ -n "$HaploInterval" ]; then
+				genomicsdb_cmd="$genomicsdb_cmd $HaploInterval"
+			fi
+			echo "GenomicsDBImport CMD $genomicsdb_cmd"
+			eval "$genomicsdb_cmd"
+			genomic_status=$?
 				if [ $genomic_status -eq 0 ]; then 
 					update_pipeline_status "$BAMFILE_NAME" "$stage"
 					echo "GenomicsDBImport completed Successfully" 
@@ -674,15 +738,15 @@ then
 				fi
 		
 
-	fi
-	#GenomicsDBImport-Status
+		fi
+		#GenomicsDBImport-Status
 
 		JOINT_OUTPUT_FILE="$OUTPUT_DIR/joint_hap.vcf.gz"
 		INDEX_FILE="$JOINT_OUTPUT_FILE.tbi"
 	
-	# 4 - Check GenotypeGVCFs status	
+		# 4 - Check GenotypeGVCFs status	
 		stage="GenotypeGVCFs"
-	if grep -q "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" && grep "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" | grep -q "|${stage}"; then
+		if grep -q "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" && grep "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" | grep -q "|${stage}"; then
 	
 			if [ -s "$JOINT_OUTPUT_FILE" ] && [ -s "$INDEX_FILE" ]; then
     			echo "Skipping GenotypeGVCFs: Already recorded in pipeline status."
@@ -692,8 +756,14 @@ then
 				exit 1
 			fi
 		else
-			echo "Running GenotypeGVCFs..."
-			./gatk --java-options "-Xms4G -Xmx32G" GenotypeGVCFs -R "$REFERENCE" -V gendb://"$DB_PATH" -O "$OUTPUT_DIR""joint_hap.vcf.gz"
+			echo "Running Joint GenotypeGVCFs..."
+			joint_genotype_cmd="./gatk --java-options "-Xms4G -Xmx32G" GenotypeGVCFs -R "$REFERENCE" -V gendb://"$DB_PATH" -G StandardAnnotation -G AS_StandardAnnotation -O "$OUTPUT_DIR""joint_hap.vcf.gz""
+			if [ -n "$HaploInterval" ]; then
+				joint_genotype_cmd="$joint_genotype_cmd $HaploInterval"
+			fi
+
+			echo "Joint GenotypeGVCFs CMD: $joint_genotype_cmd"
+			eval "$joint_genotype_cmd"
 			genotype_status=$?
 					
 			if [ $genotype_status -eq 0 ] && [ -s "$JOINT_OUTPUT_FILE" ]  && [ -s "$INDEX_FILE" ]; then 
@@ -710,598 +780,828 @@ then
 		#GenotypeGVCFs-Status check
 		
 	
-fi
-#Joint-if
-echo "++++++++++++++++++++++++++++++++++++ HaplotypeCaller COMPLETED +++++++++++++++++++++++++++++++++++++++++"
-
+	fi
+	#Joint-if
+	echo "========================================================================"
+	echo " HaplotypeCaller Pipeline Phase Completed"
+	echo "========================================================================"
+	
 ##End haplotypecaller
 elif [ "$germSomaticOP" = "SOMATIC" ]; then
-
-echo "Running MUTECT2..."      
-
-stage="Mutect2"
-if [ "$somaticOP" = "TUMORN" ]; then  #TUMOR WITH MATCHED NORMAL (SINGLE)
-
-for bampath in $(echo $TumorNormalData | sed "s/,/ /g")
-do
-	 
-	    TUMORNAME=$(echo "$bampath" | cut -d'#' -f1)
-	    NORMALNAME=$(echo "$bampath" | cut -d'#' -f2)
-
-mutect_cmd="./gatk --java-options "-Xmx4G" Mutect2 -R \"${REFERENCE}\" -I \"${OUTPUT_DIR}${TUMORNAME}.recal_reads.bam\" -I \"${OUTPUT_DIR}${NORMALNAME}.recal_reads.bam\" -normal \"${NORMALNAME}\" --germline-resource \"${germlineResource}\" --panel-of-normals \"${PON}\" -O \"${OUTPUT_DIR}${TUMORNAME}.${NORMALNAME}_mut.vcf.gz\""
-
-if grep -q "^${TUMORNAME}|" "$PIPELINE_STATUS_FILE" && grep "^${TUMORNAME}|" "$PIPELINE_STATUS_FILE" | grep -q "|${stage}"; then
-    # If both sample and stage exist in the file
-     echo "$TUMORNAME: $stage already done. Skipping Mutect2..."
-else
-
-
-	echo "Mutect2 Command: $mutect_cmd"
-	eval "$mutect_cmd"
-	update_pipeline_status "$TUMORNAME" "$stage"
-fi
-#For pipelinecheck
-
-
-done
-
-elif [ "$somaticOP" = "TUMORM" ]; then   # TUMOR WITH MATCHED NORMAL (MULTIPLE)
-
-mutect_cmd="./gatk --java-options "-Xmx4G" Mutect2 -R "${REFERENCE}""
-for bampath in $(echo $TumorNormalData | sed "s/,/ /g")
-do
-
- 	    TUMORNAME=$(echo "$bampath" | cut -d'#' -f1)
-	    NORMALNAME=$(echo "$bampath" | cut -d'#' -f2)
-	    
-mutect_cmd="$mutect_cmd -I "${OUTPUT_DIR}""${TUMORNAME}.recal_reads.bam" -I "${OUTPUT_DIR}""${NORMALNAME}.recal_reads.bam" -normal "${NORMALNAME}""
-
-mutect_cmd="$mutect_cmd --germline-resource "${germlineResource}" --panel-of-normals "${PON}" -O "${OUTPUT_DIR}""joint_mut.vcf.gz""
-
-if grep -q "^${TUMORNAME}|" "$PIPELINE_STATUS_FILE" && grep "^${TUMORNAME}|" "$PIPELINE_STATUS_FILE" | grep -q "|${stage}"; then
-    # If both sample and stage exist in the file
-     echo "$TUMORNAME: $stage already done. Skipping Mutect2..."
-else
-
-	echo "Mutect2 Command: $mutect_cmd"
-	eval "$mutect_cmd"
+	echo "========================================================================"
+	echo " Running Mutect2 Pipeline (Mode: $somaticOP)"
+	echo "========================================================================"
 	
-	update_pipeline_status "$TUMORNAME" "$stage"
-fi
-done
-elif [ "$somaticOP" = "TUMORO" ]; then #TUMOR ONLY MODE
+	
+	stage="Mutect2"
+	#=====================================================================================================
+	# 					Mutect2: 01- TUMOR WITH MATCHED NORMAL (SINGLE)
+	#=====================================================================================================
 
-for bampath in $(echo $BamFilesPath | sed "s/,/ /g")
-do
-filename=$(basename "$bampath") 
-BAMFILE_NAME=$(echo "$filename" | sed -E 's/(\.star\.Aligned\.sortedByCoord\.out)?\.bam$//') 
+	if [ "$somaticOP" = "TUMORN" ]; then  #TUMOR WITH MATCHED NORMAL (SINGLE)
 
+		for bampath in $(echo $TumorNormalData | sed "s/,/ /g")
+		do
+		
+			TUMORNAME=$(echo "$bampath" | cut -d'#' -f1)
+			NORMALNAME=$(echo "$bampath" | cut -d'#' -f2)
 
-mutect_cmd="./gatk --java-options "-Xmx4G" Mutect2 -R "${REFERENCE}" -I "${OUTPUT_DIR}""${BAMFILE_NAME}.recal_reads.bam" -O "${OUTPUT_DIR}""${BAMFILE_NAME}_mut.vcf.gz""
+			mutect_cmd="./gatk --java-options "-Xmx4G" Mutect2 -R \"${REFERENCE}\" -I \"${OUTPUT_DIR}${TUMORNAME}.recal_reads.bam\" -I \"${OUTPUT_DIR}${NORMALNAME}.recal_reads.bam\" -normal \"${NORMALNAME}\" --germline-resource \"${germlineResource}\" --panel-of-normals \"${PON}\" -O \"${OUTPUT_DIR}${TUMORNAME}.${NORMALNAME}_mut.vcf.gz\""
 
-if [ -n "$germlineResource" ]; then
-  mutect_cmd="$mutect_cmd --germline-resource "${germlineResource}""
-fi
+			if grep -q "^${TUMORNAME}|" "$PIPELINE_STATUS_FILE" && grep "^${TUMORNAME}|" "$PIPELINE_STATUS_FILE" | grep -q "|${stage}"; then
+				# If both sample and stage exist in the file
+				echo "$TUMORNAME: $stage already done. Skipping Mutect2..."
+			else
+				echo "Mutect2 Command: $mutect_cmd"
+				eval "$mutect_cmd"
+				update_pipeline_status "$TUMORNAME" "$stage"
+			fi
+			#For pipelinecheck
+		done
+		#=====================================================================================================
+		# 					Mutect2: 02- TUMOR WITH MATCHED NORMAL (MULTIPLE)
+		#=====================================================================================================
 
-if [ -n "$PON" ]; then
-  mutect_cmd="$mutect_cmd --pon "${PON}""
-fi
+	elif [ "$somaticOP" = "TUMORM" ]; then   # TUMOR WITH MATCHED NORMAL (MULTIPLE)
+		#Changed
+		JOINT_MUT_VCF="${OUTPUT_DIR}joint_mut.vcf.gz"
+		mutect_cmd="./gatk --java-options "-Xmx4G" Mutect2 -R "${REFERENCE}" --tmp-dir \"${TMP_DIR}\""
+		
+		if [ -n "$INTERVALS" ]; then
+        	mutect_cmd="$mutect_cmd -L \"${INTERVALS}\" --interval-padding 100"
+    	fi
+		
+		for bampath in $(echo $TumorNormalData | sed "s/,/ /g")
+		do
 
-if grep -q "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" && grep "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" | grep -q "|${stage}"; then
-    # If both sample and stage exist in the file
-     echo "$BAMFILE_NAME: $stage already done. Skipping Mutect2..."
-else
+ 	    	TUMORNAME=$(echo "$bampath" | cut -d'#' -f1)
+	    	NORMALNAME=$(echo "$bampath" | cut -d'#' -f2)
+	    
+			mutect_cmd="$mutect_cmd -I "${OUTPUT_DIR}""${TUMORNAME}.recal_reads.bam" -I "${OUTPUT_DIR}""${NORMALNAME}.recal_reads.bam" -normal "${NORMALNAME}""
+		
+		done
 
-	echo "Mutect2 Command: $mutect_cmd"
-	eval "$mutect_cmd"
-	update_pipeline_status "$BAMFILE_NAME" "$stage"
-fi
+			if [ -n "$germlineResource" ]; then
+        		mutect_cmd="$mutect_cmd --germline-resource \"${germlineResource}\""
+    		fi
+    		if [ -n "$PON" ]; then
+        		mutect_cmd="$mutect_cmd --panel-of-normals \"${PON}\""
+    		fi
+			
+			mutect_cmd="$mutect_cmd -O \"$JOINT_MUT_VCF\""
 
-done
-elif [ "$somaticOP" = "TUMORON" ]; then #TUMOR ONLY MODE with Normals
+			if grep -q "^${TUMORNAME}|" "$PIPELINE_STATUS_FILE" && grep "^${TUMORNAME}|" "$PIPELINE_STATUS_FILE" | grep -q "|${stage}"; then
+				# If both sample and stage exist in the file
+				echo "$TUMORNAME: $stage already done. Skipping Mutect2..."
+			else
 
-for bampath in $(echo $BamFilesPath | sed "s/,/ /g")
-do
-filename=$(basename "$bampath") 
-BAMFILE_NAME=$(echo "$filename" | sed -E 's/(\.star\.Aligned\.sortedByCoord\.out)?\.bam$//') 
+				echo "Mutect2 Command: $mutect_cmd"
+				eval "$mutect_cmd"
+				mutect_status=$?
+				if [ $mutect_status -eq 0 ] && [ -s "$JOINT_MUT_VCF" ]; then
+					if [ ! -f "${JOINT_MUT_VCF}.tbi" ]; then
+            			./gatk IndexFeatureFile -I "$JOINT_MUT_VCF"
+					fi
+            		update_pipeline_status "$BAMFILE_NAME" "$stage"
+        		else
+            		echo "Error: Mutect2 failed or output VCF ($JOINT_MUT_VCF) is missing."
+            		exit 1
+        		fi
+				
+			fi
+		#=====================================================================================================
+		# 					Mutect2: 03- TUMOR ONLY MODE
+		#=====================================================================================================
 
+	elif [ "$somaticOP" = "TUMORO" ]; then #TUMOR ONLY MODE
+		echo "Starting Tumor Only mode......."
+		
+		for bampath in $(echo $BamFilesPath | sed "s/,/ /g")
+		do
+			filename=$(basename "$bampath") 
+			BAMFILE_NAME=$(echo "$filename" | sed -E 's/(\.star\.Aligned\.sortedByCoord\.out)?\.bam$//') 
+			F1R2_FILE="${OUTPUT_DIR}${BAMFILE_NAME}_f1r2.tar.gz"
+			mutect_cmd="./gatk --java-options "-Xmx4G" Mutect2 -R "${REFERENCE}" -I "${TempOutputDir}""${BAMFILE_NAME}.recal_reads.bam" -O "${OUTPUT_DIR}""${BAMFILE_NAME}_mut.vcf.gz" --f1r2-tar-gz "${F1R2_FILE}""
 
-mutect_cmd="./gatk --java-options "-Xmx4G" Mutect2 -R "${REFERENCE}" -I "${OUTPUT_DIR}""${BAMFILE_NAME}.recal_reads.bam" -max-mnp-distance 0 -O "${OUTPUT_DIR}""${BAMFILE_NAME}_pon.vcf.gz""
+			if [ -n "$germlineResource" ]; then
+				mutect_cmd="$mutect_cmd --germline-resource "${germlineResource}""
+			fi
 
-if [ -n "$germlineResource" ]; then
-  mutect_cmd="$mutect_cmd --germline-resource "${germlineResource}""
-fi
+			if [ -n "$PON" ]; then
+				mutect_cmd="$mutect_cmd --pon "${PON}""
+			fi
 
+			if grep -q "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" && grep "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" | grep -q "|${stage}"; then
+				# If both sample and stage exist in the file
+				echo "$BAMFILE_NAME: $stage already done. Skipping Mutect2..."
+			else
 
-if grep -q "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" && grep "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" | grep -q "|${stage}"; then
-    # If both sample and stage exist in the file
-     echo "$BAMFILE_NAME: $stage already done. Skipping Mutect2..."
-else
+				echo "Mutect2 Command: $mutect_cmd"
+				eval "$mutect_cmd"
+				update_pipeline_status "$BAMFILE_NAME" "$stage"
+			fi
 
-	echo "Mutect2 Command: $mutect_cmd"
-	eval "$mutect_cmd"
-	update_pipeline_status "$BAMFILE_NAME" "$stage"
-fi
+		done
+		#=====================================================================================================
+		# 					Mutect2: 04- TUMOR ONLY MODE with Normals
+		#=====================================================================================================
 
-done
-# Build sample map for GenomicsDBImport
-sample_map="${OUTPUT_DIR}pon_sample_map.txt"
-rm -f "$sample_map"
-for vcf in $(find "$OUTPUT_DIR" -name "*_pon.vcf.gz"); do
-    sample=$(basename "$vcf" | cut -d'_' -f1)
-    echo "$sample $vcf" >> "$sample_map"
-done
+	elif [ "$somaticOP" = "TUMORON" ]; then #TUMOR ONLY MODE with Normals
 
- genomicsdb_dir="${OUTPUT_DIR}pon_db"
- echo "Running GenomicsDBImport..."
-
-    ./gatk --java-options "-Xmx4g -Xms4g" GenomicsDBImport --sample-name-map "$sample_map" --genomicsdb-workspace-path "$genomicsdb_dir" 
-
-pon_output="${OUTPUT_DIR}PON.vcf.gz"
-./gatk CreateSomaticPanelOfNormals -R "$REFERENCE" -V gendb://"$genomicsdb_dir" -O "$pon_output"
-
-
-elif [ "$somaticOP" = "TUMOROPON" ]; then #TUMOR ONLY MODE with PON
-pon_output="${OUTPUT_DIR}PON.vcf.gz"
-
-#======= First creating PON from Normals
-for bampath in $(echo $TumorNormalData | sed "s/,/ /g")
-do
-	 
-	    TUMORNAME=$(echo "$bampath" | cut -d'#' -f1)
-	    NORMALNAME=$(echo "$bampath" | cut -d'#' -f2)
-
-mutect_cmd="./gatk --java-options "-Xmx4G" Mutect2 -R "${REFERENCE}" -I "${OUTPUT_DIR}""${NORMALNAME}.recal_reads.bam" -max-mnp-distance 0 -O "${OUTPUT_DIR}""${NORMALNAME}_pon.vcf.gz""
-
-if [ -n "$germlineResource" ]; then
-  mutect_cmd="$mutect_cmd --germline-resource \"${germlineResource}\""
-fi
-
-
-if grep -q "^${NORMALNAME}|" "$PIPELINE_STATUS_FILE" && grep "^${NORMALNAME}|" "$PIPELINE_STATUS_FILE" | grep -q "|${stage}"; then
-    # If both sample and stage exist in the file
-     echo "$BAMFILE_NAME: $stage already done. Skipping Mutect2..."
-else
-	echo "Running Mutect2 on normal sample: $NORMALNAME"
-	echo "Mutect2 Command: $mutect_cmd"
-	eval "$mutect_cmd"
-	update_pipeline_status "$BAMFILE_NAME" "$NORMALNAME"
-fi
-
-done
-#======= Build sample map for GenomicsDBImport
-sample_map="${OUTPUT_DIR}pon_sample_map.txt"
-rm -f "$sample_map"
-for vcf in $(find "$OUTPUT_DIR" -name "*_pon.vcf.gz"); do
-    sample=$(basename "$vcf" | cut -d'_' -f1)
-    echo "$sample $vcf" >> "$sample_map"
-done
-
- genomicsdb_dir="${OUTPUT_DIR}pon_db"
- echo "Running GenomicsDBImport..."
-
-    ./gatk --java-options "-Xmx4g -Xms4g" GenomicsDBImport --sample-name-map "$sample_map" --genomicsdb-workspace-path "$genomicsdb_dir" 
-
-./gatk CreateSomaticPanelOfNormals -R "$REFERENCE" -V gendb://"$genomicsdb_dir" -O "$pon_output"
-
-#========= Second running Tumor only on tumors with above PON
-for bampath in $(echo $TumorNormalData | sed "s/,/ /g")
-do
-	 
-	    TUMORNAME=$(echo "$bampath" | cut -d'#' -f1)
-	    NORMALNAME=$(echo "$bampath" | cut -d'#' -f2)
-
-
-mutect_cmd="./gatk --java-options "-Xmx4G" Mutect2 -R "${REFERENCE}" -I "${OUTPUT_DIR}""${TUMORNAME}.recal_reads.bam" -O "${OUTPUT_DIR}""${TUMORNAME}_mut.vcf.gz""
-
-if [ -n "$germlineResource" ]; then
-  mutect_cmd="$mutect_cmd --germline-resource \"${germlineResource}\""
-fi
-
-# Use generated PON file
-if [ -f "$pon_output" ]; then
-    mutect_cmd="$mutect_cmd --pon \"$pon_output\""
-else
-        echo "Error: PON file not found at $pon_output"
-        exit 1
-fi
-
-if grep -q "^${TUMORNAME}|" "$PIPELINE_STATUS_FILE" && grep "^${TUMORNAME}|" "$PIPELINE_STATUS_FILE" | grep -q "|${stage}"; then
-    # If both sample and stage exist in the file
-     echo "$BAMFILE_NAME: $stage already done. Skipping Mutect2..."
-else
-
-	echo "Running Mutect2 on tumor sample: $TUMORNAME"
-	echo "Mutect2 Command: $mutect_cmd"
-	eval "$mutect_cmd"
-	update_pipeline_status "$BAMFILE_NAME" "$TUMORNAME"
-fi
-
-done
-
-elif [ "$somaticOP" = "TUMORMIT" ]; then # Mitochondrial mode
-
-for bampath in $(echo $BamFilesPath | sed "s/,/ /g")
-do
-filename=$(basename "$bampath") 
-BAMFILE_NAME=$(echo "$filename" | sed -E 's/(\.star\.Aligned\.sortedByCoord\.out)?\.bam$//') 
-
-mutect_cmd="./gatk --java-options "-Xmx4G" Mutect2 -R "${REFERENCE}" -L "${genomicInterval}" --mitochondria-mode -I "${OUTPUT_DIR}""${BAMFILE_NAME}.recal_reads.bam" -O "${OUTPUT_DIR}""${BAMFILE_NAME}_mut.vcf.gz""
-
-if grep -q "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" && grep "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" | grep -q "|${stage}"; then
-    # If both sample and stage exist in the file
-     echo "$BAMFILE_NAME: $stage already done. Skipping Mutect2..."
-else
-	echo "Mutect2 Command: $mutect_cmd"
-	eval "$mutect_cmd"
-	update_pipeline_status "$BAMFILE_NAME" "$stage"
-fi
+		for bampath in $(echo $BamFilesPath | sed "s/,/ /g")
+		do
+			filename=$(basename "$bampath") 
+			BAMFILE_NAME=$(echo "$filename" | sed -E 's/(\.star\.Aligned\.sortedByCoord\.out)?\.bam$//') 
+			mutect_cmd="./gatk --java-options "-Xmx4G" Mutect2 -R "${REFERENCE}" -I "${OUTPUT_DIR}""${BAMFILE_NAME}.recal_reads.bam" -max-mnp-distance 0 -O "${OUTPUT_DIR}""${BAMFILE_NAME}_pon.vcf.gz""
+			if [ -n "$germlineResource" ]; then
+			mutect_cmd="$mutect_cmd --germline-resource "${germlineResource}""
+			fi
 
 
-done
-elif [ "$somaticOP" = "TUMORFOR" ]; then #Force calling mode
+			if grep -q "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" && grep "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" | grep -q "|${stage}"; then
+				# If both sample and stage exist in the file
+				echo "$BAMFILE_NAME: $stage already done. Skipping Mutect2..."
+			else
 
-for bampath in $(echo $BamFilesPath | sed "s/,/ /g")
-do
-filename=$(basename "$bampath") 
-BAMFILE_NAME=$(echo "$filename" | sed -E 's/(\.star\.Aligned\.sortedByCoord\.out)?\.bam$//') 
+				echo "Mutect2 Command: $mutect_cmd"
+				eval "$mutect_cmd"
+				update_pipeline_status "$BAMFILE_NAME" "$stage"
+			fi
 
-if [ -n "$TumorNormalData" ]; then
-mutect_cmd="./gatk --java-options "-Xmx4G" Mutect2 -R \"${REFERENCE}\" -I \"${OUTPUT_DIR}${BAMFILE_NAME}.recal_reads.bam\" -alleles \"${TumorNormalData}\" -O \"${OUTPUT_DIR}${BAMFILE_NAME}_mut.vcf.gz\""
-fi
-if [ -n "$germlineResource" ]; then
-mutect_cmd="./gatk --java-options "-Xmx4G" Mutect2 -R \"${REFERENCE}\" -I \"${OUTPUT_DIR}${BAMFILE_NAME}.recal_reads.bam\" --f1r2-tar-gz \"${germlineResource}\" -O \"${OUTPUT_DIR}${BAMFILE_NAME}_mut.vcf.gz\""
-fi
+		done
+		# Build sample map for GenomicsDBImport
+		sample_map="${OUTPUT_DIR}pon_sample_map.txt"
+		rm -f "$sample_map"
+		for vcf in $(find "$OUTPUT_DIR" -name "*_pon.vcf.gz"); do
+			sample=$(basename "$vcf" | cut -d'_' -f1)
+			echo "$sample $vcf" >> "$sample_map"
+		done
+
+		genomicsdb_dir="${OUTPUT_DIR}pon_db"
+		echo "Running GenomicsDBImport..."
+
+		./gatk --java-options "-Xmx4g -Xms4g" GenomicsDBImport --sample-name-map "$sample_map" --genomicsdb-workspace-path "$genomicsdb_dir" 
+
+		pon_output="${OUTPUT_DIR}PON.vcf.gz"
+		./gatk CreateSomaticPanelOfNormals -R "$REFERENCE" -V gendb://"$genomicsdb_dir" -O "$pon_output"
+		
+		#=====================================================================================================
+		# 					Mutect2: 04- TUMOR ONLY MODE with PON
+		#=====================================================================================================
+
+	elif [ "$somaticOP" = "TUMOROPON" ]; then #TUMOR ONLY MODE with PON
+		pon_output="${OUTPUT_DIR}PON.vcf.gz"
+
+		#======= First creating PON from Normals
+		for bampath in $(echo $TumorNormalData | sed "s/,/ /g")
+		do
+		
+			TUMORNAME=$(echo "$bampath" | cut -d'#' -f1)
+			NORMALNAME=$(echo "$bampath" | cut -d'#' -f2)
+
+			mutect_cmd="./gatk --java-options "-Xmx4G" Mutect2 -R "${REFERENCE}" -I "${OUTPUT_DIR}""${NORMALNAME}.recal_reads.bam" -max-mnp-distance 0 -O "${OUTPUT_DIR}""${NORMALNAME}_pon.vcf.gz""
+
+			if [ -n "$germlineResource" ]; then
+			mutect_cmd="$mutect_cmd --germline-resource \"${germlineResource}\""
+			fi
 
 
-if grep -q "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" && grep "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" | grep -q "|${stage}"; then
-    # If both sample and stage exist in the file
-     echo "$BAMFILE_NAME: $stage already done. Skipping Mutect2..."
-else
-echo "Mutect2 Command: $mutect_cmd"
-eval "$mutect_cmd"
-update_pipeline_status "$BAMFILE_NAME" "$stage"
-fi
+			if grep -q "^${NORMALNAME}|" "$PIPELINE_STATUS_FILE" && grep "^${NORMALNAME}|" "$PIPELINE_STATUS_FILE" | grep -q "|${stage}"; then
+				# If both sample and stage exist in the file
+				echo "$BAMFILE_NAME: $stage already done. Skipping Mutect2..."
+			else
+				echo "Running Mutect2 on normal sample: $NORMALNAME"
+				echo "Mutect2 Command: $mutect_cmd"
+				eval "$mutect_cmd"
+				update_pipeline_status "$BAMFILE_NAME" "$stage"
+			fi
 
-done
+		done
+		#======= Build sample map for GenomicsDBImport
+		sample_map="${OUTPUT_DIR}pon_sample_map.txt"
+		rm -f "$sample_map"
+		for vcf in $(find "$OUTPUT_DIR" -name "*_pon.vcf.gz"); do
+			sample=$(basename "$vcf" | cut -d'_' -f1)
+			echo "$sample $vcf" >> "$sample_map"
+		done
 
-fi
+		genomicsdb_dir="${OUTPUT_DIR}pon_db"
+		echo "Running GenomicsDBImport..."
 
-echo "++++++++++++++++++++++++++++++++++++ Mutect2 COMPLETED +++++++++++++++++++++++++++++++++++++++++"
+		./gatk --java-options "-Xmx4g -Xms4g" GenomicsDBImport --sample-name-map "$sample_map" --genomicsdb-workspace-path "$genomicsdb_dir" 
 
+		./gatk CreateSomaticPanelOfNormals -R "$REFERENCE" -V gendb://"$genomicsdb_dir" -O "$pon_output"
+
+		#========= Second running Tumor only on tumors with above PON
+		for bampath in $(echo $TumorNormalData | sed "s/,/ /g")
+		do
+			
+				TUMORNAME=$(echo "$bampath" | cut -d'#' -f1)
+				NORMALNAME=$(echo "$bampath" | cut -d'#' -f2)
+
+
+			mutect_cmd="./gatk --java-options "-Xmx4G" Mutect2 -R "${REFERENCE}" -I "${OUTPUT_DIR}""${TUMORNAME}.recal_reads.bam" -O "${OUTPUT_DIR}""${TUMORNAME}_mut.vcf.gz""
+
+			if [ -n "$germlineResource" ]; then
+			mutect_cmd="$mutect_cmd --germline-resource \"${germlineResource}\""
+			fi
+
+			# Use generated PON file
+			if [ -f "$pon_output" ]; then
+				mutect_cmd="$mutect_cmd --pon \"$pon_output\""
+			else
+					echo "Error: PON file not found at $pon_output"
+					exit 1
+			fi
+
+			if grep -q "^${TUMORNAME}|" "$PIPELINE_STATUS_FILE" && grep "^${TUMORNAME}|" "$PIPELINE_STATUS_FILE" | grep -q "|${stage}"; then
+				# If both sample and stage exist in the file
+				echo "$BAMFILE_NAME: $stage already done. Skipping Mutect2..."
+			else
+
+				echo "Running Mutect2 on tumor sample: $TUMORNAME"
+				echo "Mutect2 Command: $mutect_cmd"
+				eval "$mutect_cmd"
+				update_pipeline_status "$BAMFILE_NAME" "$TUMORNAME"
+			fi
+
+		done
+		#=====================================================================================================
+		# 					Mutect2: 05- Mitochondrial mode
+		#=====================================================================================================
+
+	elif [ "$somaticOP" = "TUMORMIT" ]; then # Mitochondrial mode
+
+		for bampath in $(echo $BamFilesPath | sed "s/,/ /g")
+		do
+			filename=$(basename "$bampath") 
+			BAMFILE_NAME=$(echo "$filename" | sed -E 's/(\.star\.Aligned\.sortedByCoord\.out)?\.bam$//') 
+
+			mutect_cmd="./gatk --java-options "-Xmx4G" Mutect2 -R "${REFERENCE}" -L "${genomicInterval}" --mitochondria-mode -I "${OUTPUT_DIR}""${BAMFILE_NAME}.recal_reads.bam" -O "${OUTPUT_DIR}""${BAMFILE_NAME}_mut.vcf.gz""
+
+			if grep -q "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" && grep "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" | grep -q "|${stage}"; then
+				# If both sample and stage exist in the file
+				echo "$BAMFILE_NAME: $stage already done. Skipping Mutect2..."
+			else
+				echo "Mutect2 Command: $mutect_cmd"
+				eval "$mutect_cmd"
+				update_pipeline_status "$BAMFILE_NAME" "$stage"
+			fi
+
+
+		done
+			#=====================================================================================================
+			# 					Mutect2: 06- Force calling mode
+			#=====================================================================================================
+
+	elif [ "$somaticOP" = "TUMORFOR" ]; then #Force calling mode
+
+		for bampath in $(echo $BamFilesPath | sed "s/,/ /g")
+		do
+		filename=$(basename "$bampath") 
+		BAMFILE_NAME=$(echo "$filename" | sed -E 's/(\.star\.Aligned\.sortedByCoord\.out)?\.bam$//') 
+
+		if [ -n "$TumorNormalData" ]; then
+		mutect_cmd="./gatk --java-options "-Xmx4G" Mutect2 -R \"${REFERENCE}\" -I \"${OUTPUT_DIR}${BAMFILE_NAME}.recal_reads.bam\" -alleles \"${TumorNormalData}\" -O \"${OUTPUT_DIR}${BAMFILE_NAME}_mut.vcf.gz\""
+		fi
+		if [ -n "$germlineResource" ]; then
+		mutect_cmd="./gatk --java-options "-Xmx4G" Mutect2 -R \"${REFERENCE}\" -I \"${OUTPUT_DIR}${BAMFILE_NAME}.recal_reads.bam\" --f1r2-tar-gz \"${germlineResource}\" -O \"${OUTPUT_DIR}${BAMFILE_NAME}_mut.vcf.gz\""
+		fi
+
+
+		if grep -q "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" && grep "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" | grep -q "|${stage}"; then
+			# If both sample and stage exist in the file
+			echo "$BAMFILE_NAME: $stage already done. Skipping Mutect2..."
+		else
+		echo "Mutect2 Command: $mutect_cmd"
+		eval "$mutect_cmd"
+		update_pipeline_status "$BAMFILE_NAME" "$stage"
+		fi
+
+		done
+
+	fi
+	#Mutect2
+	echo "++++++++++++++++++++++++++++++++++++ Mutect2 COMPLETED +++++++++++++++++++++++++++++++++++++++++"
 
 elif [ "$germSomaticOP" = "BOTH" ]; then   #BOTH
-##############################
-#### RUNNING HAPLOTYPE CALLER 
-##############################
-echo "Running HaplotypeCaller 1st.....Please Wait!"
+		##############################
+		#### RUNNING HAPLOTYPE CALLER 
+		##############################
+		echo "Running HaplotypeCaller 1st.....Please Wait!"
 
-for bampath in $(echo $BamFilesPath | sed "s/,/ /g")
+	echo "========================================================================"
+	echo " Running HaplotypeCaller Pipeline (Mode: $HaploOption)"
+	echo " Interval Target: ${HaploInterval:-'Whole Genome (WGS - No Interval)'}"
+	echo "========================================================================"
 
-do
-filename=$(basename "$bampath") 
-BAMFILE_NAME=$(echo "$filename" | sed -E 's/(\.star\.Aligned\.sortedByCoord\.out)?\.bam$//') 
+	#STEP 7: HaplotypeCaller: Call germline SNPs and indels via local re-assembly of haplotypes 
+	for bampath in $(echo $BamFilesPath | sed "s/,/ /g")
+	do
+		filename=$(basename "$bampath") 
+		BAMFILE_NAME=$(echo "$filename" | sed -E 's/(\.star\.Aligned\.sortedByCoord\.out)?\.bam$//') 
+		haplotype_cmd="./gatk --java-options \"-Xms4G -Xmx12G\" HaplotypeCaller -I "${OUTPUT_DIR}${BAMFILE_NAME}.recal_reads.bam" -R "${REFERENCE}" -O "${OUTPUT_DIR}""${BAMFILE_NAME}_ghap.vcf.gz" -ERC "$ERC" -G StandardAnnotation -G AS_StandardAnnotation --native-pair-hmm-threads ${Thread}"
+		
+		# Add interval target if provided
+		if [ -n "$HaploInterval" ]; then
+			haplotype_cmd="$haplotype_cmd $HaploInterval --interval-padding 100"
+		fi
+		
+		#Single-sample GVCF calling with allele-specific annotations
+		if [ -n "$G1" ]; then
+		haplotype_cmd="$haplotype_cmd $G1"
+		fi
 
-haplotype_cmd="./gatk --java-options "-Xmx4G" HaplotypeCaller -I "${OUTPUT_DIR}""${BAMFILE_NAME}.recal_reads.bam" -R "${REFERENCE}" -O "${OUTPUT_DIR}""${BAMFILE_NAME}_hap.vcf.gz" -ERC "$ERC""
+		#Variant calling with bamout to show realigned reads
+		if [ -n "$bamout" ]; then
+		haplotype_cmd="$haplotype_cmd -bamout $bamout"
+		fi
 
+		#Single-sample GVCF calling (outputs intermediate GVCF)
+		happ_vcf="${OUTPUT_DIR}""${BAMFILE_NAME}_ghap.vcf.gz"
+		hap_vcf="${OUTPUT_DIR}""${BAMFILE_NAME}_hap.vcf.gz"
 
-#Single-sample GVCF calling with allele-specific annotations
+		stage="HaplotypeCaller"
+		if grep -q "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" && grep "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" | grep -q "|${stage}"; then
+			# If both sample and stage exist in the file
+			echo "$BAMFILE_NAME: $stage already done. Skipping HaplotypeCaller..."
+		else
 
-if [ -n "$G1" ]; then
-  haplotype_cmd="$haplotype_cmd $G1"
-fi
+			echo "HaplotypeCaller Command: $haplotype_cmd"
+			eval "$haplotype_cmd"
+			hap_status=$?
 
-#Variant calling with bamout to show realigned reads
+			if [ $hap_status -eq 0 ] && [ -s "$happ_vcf" ]; then 
+				update_pipeline_status "$BAMFILE_NAME" "HaplotypeCaller"
+				
+				if [ "$HaploOption" = "SINGLEMODE" ];
+				then
+					stage="GenotypeGVCFs"
+					if grep -q "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" && grep "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" | grep -q "|${stage}"; 
+					then
+						# If both sample and stage exist in the file
+						echo "$BAMFILE_NAME: $stage already done. Skipping GenotypeGVCFs..."
+					
+					else
+						echo "Running GenotypeGVCFs (SINGLEMODE) for $BAMFILE_NAME : "
+						genotype_cmd="./gatk --java-options "-Xms4G -Xmx18G" GenotypeGVCFs -R "$REFERENCE" -V "${OUTPUT_DIR}${BAMFILE_NAME}_ghap.vcf.gz" -G StandardAnnotation -G AS_StandardAnnotation -O "${OUTPUT_DIR}${BAMFILE_NAME}_hap.vcf.gz""
+							
+							if [ -n "$HaploInterval" ]; then
+								genotype_cmd="$genotype_cmd $HaploInterval"
+							fi
+						echo "GenotypeGVCFs CMD: $genotype_cmd"
+						eval "$genotype_cmd"	
+						genotype_status=$?
+						
+							if [ $genotype_status -eq 0 ] && [ -s "$hap_vcf" ]; then 
+								update_pipeline_status "$BAMFILE_NAME" "GenotypeGVCFs"
+								echo "GenotypeGVCFs completed successfully."
+								
+								rm -f "$happ_vcf"
+							else
+								echo "Error: GenotypeGVCFs failed or output VCF ($hap_vcf) is invalid or not indexed properly."
+								exit 1
+							fi
 
-if [ -n "$bamout" ]; then
-  haplotype_cmd="$haplotype_cmd -bamout $bamout"
-fi
+					fi
 
-#Single-sample GVCF calling (outputs intermediate GVCF)
+				else
+					continue			
+				fi
+			else
+				echo "Error: HaplotypeCaller failed or output VCF ($hap_vcf) is invalid or not indexed properly."
+				exit 1
+			fi
+		
+		
+		fi
+	done
 
+	if [ "$HaploOption" = "JOINTMODE" ];
+	then
+		BAMFILE_NAME="joint"
+		# List all _hap.vcf.gz files in the specified directory
+		# 1- Define GenomicsDB workspace directory
+		DB_PATH="$OUTPUT_DIR/genomicsdb"
 
-#Check for File already exist or Not .add.bam
-hap_vcf="${OUTPUT_DIR}""${BAMFILE_NAME}_hap.vcf.gz"
-
-stage="HaplotypeCaller"
-if grep -q "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" && grep "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" | grep -q "|${stage}"; then
-    # If both sample and stage exist in the file
-     echo "$BAMFILE_NAME: $stage already done. Skipping HaplotypeCaller..."
-   
-else
-
-echo "HaplotypeCaller Command: $haplotype_cmd"
-  eval "$haplotype_cmd"
-
-update_pipeline_status "$BAMFILE_NAME" "HaplotypeCaller"
-
-
-fi
-
-
-
-done
-#END OF GERMLINE HAPLOTYPE
-
-if [ $HaploOption = "JOINTMODE" ];
-then
-# List all _hap.vcf.gz files in the specified directory
-echo "Running GenotypeGVCFs..."
-#VCF_FILES=$(find "$OUTPUT_DIR" -name "*_hap.vcf.gz")
-
-VCF_ARGS=""
-for f in "$OUTPUT_DIR"/*_hap.vcf.gz; do
-    VCF_ARGS="$VCF_ARGS -V $f"
-done
-
-echo "./gatk --java-options "-Xmx4G" GenotypeGVCFs -R "${REFERENCE}" ${VCF_ARGS}  -O "${OUTPUT_DIR}""joint_hap.vcf.gz" "
-./gatk --java-options "-Xmx4G" GenotypeGVCFs -R "${REFERENCE}" ${VCF_ARGS}  -O "${OUTPUT_DIR}""joint_hap.vcf.gz" 
-
-fi
-echo "++++++++++++++++++++++++++++++++++++ HaplotypeCaller COMPLETED +++++++++++++++++++++++++++++++++++++++++"
-
-
-echo "Running MUTECT2.....Please Wait!"
-
-stage="Mutect2"
-if [ "$somaticOP" = "TUMORN" ]; then  #TUMOR WITH MATCHED NORMAL (SINGLE)
-
-for bampath in $(echo $TumorNormalData | sed "s/,/ /g")
-do
-	 
-	    TUMORNAME=$(echo "$bampath" | cut -d'#' -f1)
-	    NORMALNAME=$(echo "$bampath" | cut -d'#' -f2)
-
-mutect_cmd="./gatk --java-options "-Xmx4G" Mutect2 -R \"${REFERENCE}\" -I \"${OUTPUT_DIR}${TUMORNAME}.recal_reads.bam\" -I \"${OUTPUT_DIR}${NORMALNAME}.recal_reads.bam\" -normal \"${NORMALNAME}\" --germline-resource \"${germlineResource}\" --panel-of-normals \"${PON}\" -O \"${OUTPUT_DIR}${TUMORNAME}.${NORMALNAME}_mut.vcf.gz\""
-
-if grep -q "^${TUMORNAME}|" "$PIPELINE_STATUS_FILE" && grep "^${TUMORNAME}|" "$PIPELINE_STATUS_FILE" | grep -q "|${stage}"; then
-    # If both sample and stage exist in the file
-     echo "$TUMORNAME: $stage already done. Skipping Mutect2..."
-else
-
-
-	echo "Mutect2 Command: $mutect_cmd"
-	eval "$mutect_cmd"
-	update_pipeline_status "$TUMORNAME" "$stage"
-fi
-#For pipelinecheck
-
-
-done
-
-elif [ "$somaticOP" = "TUMORM" ]; then   # TUMOR WITH MATCHED NORMAL (MULTIPLE)
-
-mutect_cmd="./gatk --java-options "-Xmx4G" Mutect2 -R "${REFERENCE}""
-for bampath in $(echo $TumorNormalData | sed "s/,/ /g")
-do
-
- 	    TUMORNAME=$(echo "$bampath" | cut -d'#' -f1)
-	    NORMALNAME=$(echo "$bampath" | cut -d'#' -f2)
-	    
-mutect_cmd="$mutect_cmd -I "${OUTPUT_DIR}""${TUMORNAME}.recal_reads.bam" -I "${OUTPUT_DIR}""${NORMALNAME}.recal_reads.bam" -normal "${NORMALNAME}""
-
-mutect_cmd="$mutect_cmd --germline-resource "${germlineResource}" --panel-of-normals "${PON}" -O "${OUTPUT_DIR}""joint_mut.vcf.gz""
-
-if grep -q "^${TUMORNAME}|" "$PIPELINE_STATUS_FILE" && grep "^${TUMORNAME}|" "$PIPELINE_STATUS_FILE" | grep -q "|${stage}"; then
-    # If both sample and stage exist in the file
-     echo "$TUMORNAME: $stage already done. Skipping Mutect2..."
-else
-
-	echo "Mutect2 Command: $mutect_cmd"
-	eval "$mutect_cmd"
+		# 2- Creating a map file	
+		GVCF_LIST="$OUTPUT_DIR/gvcf_map.txt"
+		echo "------------------------------------------------------------------------"
+		echo " Starting Joint Variant Calling Pipeline"
+		echo "------------------------------------------------------------------------"
 	
-	update_pipeline_status "$TUMORNAME" "$stage"
-fi
-done
-elif [ "$somaticOP" = "TUMORO" ]; then #TUMOR ONLY MODE
+		# Correction: Always clear/rebuild the map from current BAMs
+		> "$GVCF_LIST"
+		for bampath in $(echo $BamFilesPath | sed "s/,/ /g")
+		do
+    		filename=$(basename "$bampath")
+    		sample=$(echo "$filename" | sed -E 's/(\.star\.Aligned\.sortedByCoord\.out)?\.bam$//')
+    		gvcf_path="${OUTPUT_DIR}${sample}_ghap.vcf.gz"
+    
+    		if [ -s "$gvcf_path" ]; then
+        		echo -e "${sample}\t${gvcf_path}" >> "$GVCF_LIST"
+    		else
+        		echo "Error: GVCF file for $sample ($gvcf_path) is missing or empty."
+       			 exit 1
+    		fi
+		done
+		
+		
+		#if [ ! -s "$GVCF_LIST" ]; then
+		#	for f in "$OUTPUT_DIR"/*_ghap.vcf.gz; do
+		#		sample=$(basename "$f" _ghap.vcf.gz)
+		#		echo -e "$sample\t$f" >> "$GVCF_LIST"
+		#	done
+		#else
+		#	echo "Map File $GVCF_LIST already exists. Skipping creation."
+		#fi
+	
+		echo "Running GenomicsDBImport + GenotypeGVCFs..."
+		#Changed:  Generate a unique hash based on the content of the current sample map
+		MAP_HASH=$(md5sum "$GVCF_LIST" | cut -d' ' -f1)
+		DB_PATH="$OUTPUT_DIR/genomicsdb_${MAP_HASH}"
+		
+		#3- Check GenomicsDBImport in Status or not
+		stage="GenomicsDBImport"
+		if grep -q "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" && grep "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" | grep -q "|${stage}"; then
+	
+			if [ -d "$DB_PATH" ] && [ -f "$DB_PATH/callset.json" ] && [ -f "$DB_PATH/vidmap.json" ] && [ -f "$DB_PATH/vcfheader.vcf" ] ; then
+				echo "GenomicsDB workspace already exists at $DB_PATH"
+				echo "Skipping GenomicsDBImport..."
+			else
+				echo "Error: GenomicsDBImport is recorded in the status file, but one or more required files are missing ($DB_PATH, $DB_PATH/callset.json, $DB_PATH/vidmap.json, $DB_PATH/vcfheader.vcf)."
+				exit 1
+			fi
 
-for bampath in $(echo $BamFilesPath | sed "s/,/ /g")
-do
-filename=$(basename "$bampath") 
-BAMFILE_NAME=$(echo "$filename" | sed -E 's/(\.star\.Aligned\.sortedByCoord\.out)?\.bam$//') 
+		else
+			echo ">>> Running GenomicsDBImport..."
+			genomicsdb_cmd="./gatk --java-options "-Xms4g -Xmx18g" GenomicsDBImport --genomicsdb-workspace-path "$DB_PATH" --batch-size 50 --sample-name-map "${GVCF_LIST}" --reader-threads ${Thread} ${HaploInterval}"
+			if [ -n "$HaploInterval" ]; then
+				genomicsdb_cmd="$genomicsdb_cmd $HaploInterval"
+			fi
+			echo "GenomicsDBImport CMD $genomicsdb_cmd"
+			eval "$genomicsdb_cmd"
+			genomic_status=$?
+				if [ $genomic_status -eq 0 ]; then 
+					update_pipeline_status "$BAMFILE_NAME" "$stage"
+					echo "GenomicsDBImport completed Successfully" 
+				else
+					echo "Error: GenomicsDBImport failed."
+					exit 1		
+				fi
+		
 
+		fi
+		#GenomicsDBImport-Status
 
-mutect_cmd="./gatk --java-options "-Xmx4G" Mutect2 -R "${REFERENCE}" -I "${OUTPUT_DIR}""${BAMFILE_NAME}.recal_reads.bam" -O "${OUTPUT_DIR}""${BAMFILE_NAME}_mut.vcf.gz""
+		JOINT_OUTPUT_FILE="$OUTPUT_DIR/joint_hap.vcf.gz"
+		INDEX_FILE="$JOINT_OUTPUT_FILE.tbi"
+	
+		# 4 - Check GenotypeGVCFs status	
+		stage="GenotypeGVCFs"
+		if grep -q "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" && grep "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" | grep -q "|${stage}"; then
+	
+			if [ -s "$JOINT_OUTPUT_FILE" ] && [ -s "$INDEX_FILE" ]; then
+    			echo "Skipping GenotypeGVCFs: Already recorded in pipeline status."
+				echo " $JOINT_OUTPUT_FILE and its index already exist."
+			else
+				echo "Error: GenotypeGVCFs is written in status file but $JOINT_OUTPUT_FILE and its index does not exist."
+				exit 1
+			fi
+		else
+			echo "Running Joint GenotypeGVCFs..."
+			joint_genotype_cmd="./gatk --java-options "-Xms4G -Xmx32G" GenotypeGVCFs -R "$REFERENCE" -V gendb://"$DB_PATH" -G StandardAnnotation -G AS_StandardAnnotation -O "$OUTPUT_DIR""joint_hap.vcf.gz""
+			if [ -n "$HaploInterval" ]; then
+				joint_genotype_cmd="$joint_genotype_cmd $HaploInterval"
+			fi
 
-if [ -n "$germlineResource" ]; then
-  mutect_cmd="$mutect_cmd --germline-resource "${germlineResource}""
-fi
+			echo "Joint GenotypeGVCFs CMD: $joint_genotype_cmd"
+			eval "$joint_genotype_cmd"
+			genotype_status=$?
+					
+			if [ $genotype_status -eq 0 ] && [ -s "$JOINT_OUTPUT_FILE" ]  && [ -s "$INDEX_FILE" ]; then 
+				update_pipeline_status "$BAMFILE_NAME" "$stage"
+				echo "GenotypeGVCFs completed successfully."
+				
+			else
+				echo "Error: GenotypeGVCFs failed or output VCF ($JOINT_OUTPUT_FILE, INDEX_FILE) is invalid or not indexed properly."
+				exit 1
+			fi
+			#GVCF-IF
 
-if [ -n "$PON" ]; then
-  mutect_cmd="$mutect_cmd --pon "${PON}""
-fi
-
-if grep -q "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" && grep "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" | grep -q "|${stage}"; then
-    # If both sample and stage exist in the file
-     echo "$BAMFILE_NAME: $stage already done. Skipping Mutect2..."
-else
-
-	echo "Mutect2 Command: $mutect_cmd"
-	eval "$mutect_cmd"
-	update_pipeline_status "$BAMFILE_NAME" "$stage"
-fi
-
-done
-elif [ "$somaticOP" = "TUMORON" ]; then #TUMOR ONLY MODE with Normals
-
-for bampath in $(echo $BamFilesPath | sed "s/,/ /g")
-do
-filename=$(basename "$bampath") 
-BAMFILE_NAME=$(echo "$filename" | sed -E 's/(\.star\.Aligned\.sortedByCoord\.out)?\.bam$//') 
-
-
-mutect_cmd="./gatk --java-options "-Xmx4G" Mutect2 -R "${REFERENCE}" -I "${OUTPUT_DIR}""${BAMFILE_NAME}.recal_reads.bam" -max-mnp-distance 0 -O "${OUTPUT_DIR}""${BAMFILE_NAME}_pon.vcf.gz""
-
-if [ -n "$germlineResource" ]; then
-  mutect_cmd="$mutect_cmd --germline-resource "${germlineResource}""
-fi
-
-
-if grep -q "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" && grep "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" | grep -q "|${stage}"; then
-    # If both sample and stage exist in the file
-     echo "$BAMFILE_NAME: $stage already done. Skipping Mutect2..."
-else
-
-	echo "Mutect2 Command: $mutect_cmd"
-	eval "$mutect_cmd"
-	update_pipeline_status "$BAMFILE_NAME" "$stage"
-fi
-
-done
-# Build sample map for GenomicsDBImport
-sample_map="${OUTPUT_DIR}pon_sample_map.txt"
-rm -f "$sample_map"
-for vcf in $(find "$OUTPUT_DIR" -name "*_pon.vcf.gz"); do
-    sample=$(basename "$vcf" | cut -d'_' -f1)
-    echo "$sample $vcf" >> "$sample_map"
-done
-
- genomicsdb_dir="${OUTPUT_DIR}pon_db"
- echo "Running GenomicsDBImport..."
-
-    ./gatk --java-options "-Xmx4g -Xms4g" GenomicsDBImport --sample-name-map "$sample_map" --genomicsdb-workspace-path "$genomicsdb_dir" 
-
-pon_output="${OUTPUT_DIR}PON.vcf.gz"
-./gatk CreateSomaticPanelOfNormals -R "$REFERENCE" -V gendb://"$genomicsdb_dir" -O "$pon_output"
-
-
-elif [ "$somaticOP" = "TUMOROPON" ]; then #TUMOR ONLY MODE with PON
-pon_output="${OUTPUT_DIR}PON.vcf.gz"
-
-#======= First creating PON from Normals
-for bampath in $(echo $TumorNormalData | sed "s/,/ /g")
-do
-	 
-	    TUMORNAME=$(echo "$bampath" | cut -d'#' -f1)
-	    NORMALNAME=$(echo "$bampath" | cut -d'#' -f2)
-
-mutect_cmd="./gatk --java-options "-Xmx4G" Mutect2 -R "${REFERENCE}" -I "${OUTPUT_DIR}""${NORMALNAME}.recal_reads.bam" -max-mnp-distance 0 -O "${OUTPUT_DIR}""${NORMALNAME}_pon.vcf.gz""
-
-if [ -n "$germlineResource" ]; then
-  mutect_cmd="$mutect_cmd --germline-resource \"${germlineResource}\""
-fi
-
-
-if grep -q "^${NORMALNAME}|" "$PIPELINE_STATUS_FILE" && grep "^${NORMALNAME}|" "$PIPELINE_STATUS_FILE" | grep -q "|${stage}"; then
-    # If both sample and stage exist in the file
-     echo "$BAMFILE_NAME: $stage already done. Skipping Mutect2..."
-else
-	echo "Running Mutect2 on normal sample: $NORMALNAME"
-	echo "Mutect2 Command: $mutect_cmd"
-	eval "$mutect_cmd"
-	update_pipeline_status "$BAMFILE_NAME" "$NORMALNAME"
-fi
-
-done
-#======= Build sample map for GenomicsDBImport
-sample_map="${OUTPUT_DIR}pon_sample_map.txt"
-rm -f "$sample_map"
-for vcf in $(find "$OUTPUT_DIR" -name "*_pon.vcf.gz"); do
-    sample=$(basename "$vcf" | cut -d'_' -f1)
-    echo "$sample $vcf" >> "$sample_map"
-done
-
- genomicsdb_dir="${OUTPUT_DIR}pon_db"
- echo "Running GenomicsDBImport..."
-
-    ./gatk --java-options "-Xmx4g -Xms4g" GenomicsDBImport --sample-name-map "$sample_map" --genomicsdb-workspace-path "$genomicsdb_dir" 
-
-./gatk CreateSomaticPanelOfNormals -R "$REFERENCE" -V gendb://"$genomicsdb_dir" -O "$pon_output"
-
-#========= Second running Tumor only on tumors with above PON
-for bampath in $(echo $TumorNormalData | sed "s/,/ /g")
-do
-	 
-	    TUMORNAME=$(echo "$bampath" | cut -d'#' -f1)
-	    NORMALNAME=$(echo "$bampath" | cut -d'#' -f2)
+		fi
+		#GenotypeGVCFs-Status check
+		
+	
+	fi
+	#Joint-if
+	echo "========================================================================"
+	echo " HaplotypeCaller Pipeline Phase Completed"
+	echo "========================================================================"
+	
+	#echo "++++++++++++++++++++++++++++++++++++ HaplotypeCaller COMPLETED +++++++++++++++++++++++++++++++++++++++++"
 
 
-mutect_cmd="./gatk --java-options "-Xmx4G" Mutect2 -R "${REFERENCE}" -I "${OUTPUT_DIR}""${TUMORNAME}.recal_reads.bam" -O "${OUTPUT_DIR}""${TUMORNAME}_mut.vcf.gz""
+		echo "Running MUTECT2.....Please Wait!"
 
-if [ -n "$germlineResource" ]; then
-  mutect_cmd="$mutect_cmd --germline-resource \"${germlineResource}\""
-fi
+		stage="Mutect2"
+		#=====================================================================================================
+		# 	BOTH			Mutect2: 01- TUMOR WITH MATCHED NORMAL (SINGLE)
+		#=====================================================================================================
+	if [ "$somaticOP" = "TUMORN" ]; then  #TUMOR WITH MATCHED NORMAL (SINGLE)
 
-# Use generated PON file
-if [ -f "$pon_output" ]; then
-    mutect_cmd="$mutect_cmd --pon \"$pon_output\""
-else
-        echo "Error: PON file not found at $pon_output"
-        exit 1
-fi
+		for bampath in $(echo $TumorNormalData | sed "s/,/ /g")
+		do
+		
+			TUMORNAME=$(echo "$bampath" | cut -d'#' -f1)
+			NORMALNAME=$(echo "$bampath" | cut -d'#' -f2)
 
-if grep -q "^${TUMORNAME}|" "$PIPELINE_STATUS_FILE" && grep "^${TUMORNAME}|" "$PIPELINE_STATUS_FILE" | grep -q "|${stage}"; then
-    # If both sample and stage exist in the file
-     echo "$BAMFILE_NAME: $stage already done. Skipping Mutect2..."
-else
+			mutect_cmd="./gatk --java-options "-Xmx4G" Mutect2 -R \"${REFERENCE}\" -I \"${OUTPUT_DIR}${TUMORNAME}.recal_reads.bam\" -I \"${OUTPUT_DIR}${NORMALNAME}.recal_reads.bam\" -normal \"${NORMALNAME}\" --germline-resource \"${germlineResource}\" --panel-of-normals \"${PON}\" -O \"${OUTPUT_DIR}${TUMORNAME}.${NORMALNAME}_mut.vcf.gz\""
 
-	echo "Running Mutect2 on tumor sample: $TUMORNAME"
-	echo "Mutect2 Command: $mutect_cmd"
-	eval "$mutect_cmd"
-	update_pipeline_status "$BAMFILE_NAME" "$TUMORNAME"
-fi
-
-done
-
-elif [ "$somaticOP" = "TUMORMIT" ]; then # Mitochondrial mode
-
-for bampath in $(echo $BamFilesPath | sed "s/,/ /g")
-do
-filename=$(basename "$bampath") 
-BAMFILE_NAME=$(echo "$filename" | sed -E 's/(\.star\.Aligned\.sortedByCoord\.out)?\.bam$//') 
-
-mutect_cmd="./gatk --java-options "-Xmx4G" Mutect2 -R "${REFERENCE}" -L "${genomicInterval}" --mitochondria-mode -I "${OUTPUT_DIR}""${BAMFILE_NAME}.recal_reads.bam" -O "${OUTPUT_DIR}""${BAMFILE_NAME}_mut.vcf.gz""
-
-if grep -q "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" && grep "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" | grep -q "|${stage}"; then
-    # If both sample and stage exist in the file
-     echo "$BAMFILE_NAME: $stage already done. Skipping Mutect2..."
-else
-	echo "Mutect2 Command: $mutect_cmd"
-	eval "$mutect_cmd"
-	update_pipeline_status "$BAMFILE_NAME" "$stage"
-fi
+			if grep -q "^${TUMORNAME}|" "$PIPELINE_STATUS_FILE" && grep "^${TUMORNAME}|" "$PIPELINE_STATUS_FILE" | grep -q "|${stage}"; then
+				# If both sample and stage exist in the file
+				echo "$TUMORNAME: $stage already done. Skipping Mutect2..."
+			else
 
 
-done
-elif [ "$somaticOP" = "TUMORFOR" ]; then #Force calling mode
+				echo "Mutect2 Command: $mutect_cmd"
+				eval "$mutect_cmd"
+				update_pipeline_status "$TUMORNAME" "$stage"
+			fi
+			#For pipelinecheck
+		done
+		#=====================================================================================================
+		# 	BOTH				Mutect2: 02- TUMOR WITH MATCHED NORMAL (MULTIPLE)
+		#=====================================================================================================
+	elif [ "$somaticOP" = "TUMORM" ]; then   # TUMOR WITH MATCHED NORMAL (MULTIPLE)
+		
+		#Changed
+		JOINT_MUT_VCF="${OUTPUT_DIR}joint_mut.vcf.gz"
+		mutect_cmd="./gatk --java-options "-Xmx4G" Mutect2 -R "${REFERENCE}" --tmp-dir \"${TMP_DIR}\""
+		
+		if [ -n "$INTERVALS" ]; then
+        	mutect_cmd="$mutect_cmd -L \"${INTERVALS}\" --interval-padding 100"
+    	fi
+		
+		for bampath in $(echo $TumorNormalData | sed "s/,/ /g")
+		do
 
-for bampath in $(echo $BamFilesPath | sed "s/,/ /g")
-do
-filename=$(basename "$bampath") 
-BAMFILE_NAME=$(echo "$filename" | sed -E 's/(\.star\.Aligned\.sortedByCoord\.out)?\.bam$//') 
+ 	    	TUMORNAME=$(echo "$bampath" | cut -d'#' -f1)
+	    	NORMALNAME=$(echo "$bampath" | cut -d'#' -f2)
+	    
+			mutect_cmd="$mutect_cmd -I "${OUTPUT_DIR}""${TUMORNAME}.recal_reads.bam" -I "${OUTPUT_DIR}""${NORMALNAME}.recal_reads.bam" -normal "${NORMALNAME}""
+		
+		done
 
-if [ -n "$TumorNormalData" ]; then
-mutect_cmd="./gatk --java-options "-Xmx4G" Mutect2 -R \"${REFERENCE}\" -I \"${OUTPUT_DIR}${BAMFILE_NAME}.recal_reads.bam\" -alleles \"${TumorNormalData}\" -O \"${OUTPUT_DIR}${BAMFILE_NAME}_mut.vcf.gz\""
-fi
-if [ -n "$germlineResource" ]; then
-mutect_cmd="./gatk --java-options "-Xmx4G" Mutect2 -R \"${REFERENCE}\" -I \"${OUTPUT_DIR}${BAMFILE_NAME}.recal_reads.bam\" --f1r2-tar-gz \"${germlineResource}\" -O \"${OUTPUT_DIR}${BAMFILE_NAME}_mut.vcf.gz\""
-fi
+			if [ -n "$germlineResource" ]; then
+        		mutect_cmd="$mutect_cmd --germline-resource \"${germlineResource}\""
+    		fi
+    		if [ -n "$PON" ]; then
+        		mutect_cmd="$mutect_cmd --panel-of-normals \"${PON}\""
+    		fi
+			#mutect_cmd="$mutect_cmd --germline-resource "${germlineResource}" --panel-of-normals "${PON}" -O "${OUTPUT_DIR}""joint_mut.vcf.gz""
+
+			mutect_cmd="$mutect_cmd -O \"$JOINT_MUT_VCF\""
+
+			if grep -q "^${TUMORNAME}|" "$PIPELINE_STATUS_FILE" && grep "^${TUMORNAME}|" "$PIPELINE_STATUS_FILE" | grep -q "|${stage}"; then
+				# If both sample and stage exist in the file
+				echo "$TUMORNAME: $stage already done. Skipping Mutect2..."
+			else
+
+				echo "Mutect2 Command: $mutect_cmd"
+				eval "$mutect_cmd"
+				mutect_status=$?
+				if [ $mutect_status -eq 0 ] && [ -s "$JOINT_MUT_VCF" ]; then
+					if [ ! -f "${JOINT_MUT_VCF}.tbi" ]; then
+            		./gatk IndexFeatureFile -I "$JOINT_MUT_VCF"
+					fi
+            		update_pipeline_status "$BAMFILE_NAME" "$stage"
+        		else
+            		echo "Error: Mutect2 failed or output VCF ($JOINT_MUT_VCF) is missing."
+            		exit 1
+        		fi
+				#update_pipeline_status "$TUMORNAME" "$stage"
+			fi
+		#=====================================================================================================
+		# 		BOTH			Mutect2: 03- TUMOR ONLY MODE
+		#=====================================================================================================
+
+	elif [ "$somaticOP" = "TUMORO" ]; then #TUMOR ONLY MODE
+
+		for bampath in $(echo $BamFilesPath | sed "s/,/ /g")
+		do
+			filename=$(basename "$bampath") 
+			BAMFILE_NAME=$(echo "$filename" | sed -E 's/(\.star\.Aligned\.sortedByCoord\.out)?\.bam$//') 
+			mutect_cmd="./gatk --java-options "-Xmx4G" Mutect2 -R "${REFERENCE}" -I "${OUTPUT_DIR}""${BAMFILE_NAME}.recal_reads.bam" -O "${OUTPUT_DIR}""${BAMFILE_NAME}_mut.vcf.gz""
+
+			if [ -n "$germlineResource" ]; then
+			mutect_cmd="$mutect_cmd --germline-resource "${germlineResource}""
+			fi
+
+			if [ -n "$PON" ]; then
+			mutect_cmd="$mutect_cmd --pon "${PON}""
+			fi
+
+			if grep -q "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" && grep "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" | grep -q "|${stage}"; then
+				# If both sample and stage exist in the file
+				echo "$BAMFILE_NAME: $stage already done. Skipping Mutect2..."
+			else
+
+				echo "Mutect2 Command: $mutect_cmd"
+				eval "$mutect_cmd"
+				update_pipeline_status "$BAMFILE_NAME" "$stage"
+			fi
+
+		done
+		#=====================================================================================================
+		# 		BOTH			Mutect2: 04- TUMOR ONLY MODE with Normals
+		#=====================================================================================================
+
+	elif [ "$somaticOP" = "TUMORON" ]; then #TUMOR ONLY MODE with Normals
+
+		for bampath in $(echo $BamFilesPath | sed "s/,/ /g")
+		do
+			filename=$(basename "$bampath") 
+			BAMFILE_NAME=$(echo "$filename" | sed -E 's/(\.star\.Aligned\.sortedByCoord\.out)?\.bam$//') 
+			mutect_cmd="./gatk --java-options "-Xmx4G" Mutect2 -R "${REFERENCE}" -I "${OUTPUT_DIR}""${BAMFILE_NAME}.recal_reads.bam" -max-mnp-distance 0 -O "${OUTPUT_DIR}""${BAMFILE_NAME}_pon.vcf.gz""
+
+			if [ -n "$germlineResource" ]; then
+			mutect_cmd="$mutect_cmd --germline-resource "${germlineResource}""
+			fi
+
+			if grep -q "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" && grep "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" | grep -q "|${stage}"; then
+				# If both sample and stage exist in the file
+				echo "$BAMFILE_NAME: $stage already done. Skipping Mutect2..."
+			else
+
+				echo "Mutect2 Command: $mutect_cmd"
+				eval "$mutect_cmd"
+				update_pipeline_status "$BAMFILE_NAME" "$stage"
+			fi
+
+		done
+		# Build sample map for GenomicsDBImport
+		sample_map="${OUTPUT_DIR}pon_sample_map.txt"
+		rm -f "$sample_map"
+		for vcf in $(find "$OUTPUT_DIR" -name "*_pon.vcf.gz"); do
+			sample=$(basename "$vcf" | cut -d'_' -f1)
+			echo "$sample $vcf" >> "$sample_map"
+		done
+
+		genomicsdb_dir="${OUTPUT_DIR}pon_db"
+		echo "Running GenomicsDBImport..."
+
+			./gatk --java-options "-Xmx4g -Xms4g" GenomicsDBImport --sample-name-map "$sample_map" --genomicsdb-workspace-path "$genomicsdb_dir" 
+
+		pon_output="${OUTPUT_DIR}PON.vcf.gz"
+		./gatk CreateSomaticPanelOfNormals -R "$REFERENCE" -V gendb://"$genomicsdb_dir" -O "$pon_output"
+
+		#=====================================================================================================
+		# 		BOTH			Mutect2: 05- TUMOR ONLY MODE with PON
+		#=====================================================================================================
+
+	elif [ "$somaticOP" = "TUMOROPON" ]; then #TUMOR ONLY MODE with PON
+		pon_output="${OUTPUT_DIR}PON.vcf.gz"
+
+		#======= First creating PON from Normals
+		for bampath in $(echo $TumorNormalData | sed "s/,/ /g")
+		do
+			
+				TUMORNAME=$(echo "$bampath" | cut -d'#' -f1)
+				NORMALNAME=$(echo "$bampath" | cut -d'#' -f2)
+
+			mutect_cmd="./gatk --java-options "-Xmx4G" Mutect2 -R "${REFERENCE}" -I "${OUTPUT_DIR}""${NORMALNAME}.recal_reads.bam" -max-mnp-distance 0 -O "${OUTPUT_DIR}""${NORMALNAME}_pon.vcf.gz""
+
+			if [ -n "$germlineResource" ]; then
+			mutect_cmd="$mutect_cmd --germline-resource \"${germlineResource}\""
+			fi
 
 
-if grep -q "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" && grep "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" | grep -q "|${stage}"; then
-    # If both sample and stage exist in the file
-     echo "$BAMFILE_NAME: $stage already done. Skipping Mutect2..."
-else
-echo "Mutect2 Command: $mutect_cmd"
-eval "$mutect_cmd"
-update_pipeline_status "$BAMFILE_NAME" "$stage"
-fi
+			if grep -q "^${NORMALNAME}|" "$PIPELINE_STATUS_FILE" && grep "^${NORMALNAME}|" "$PIPELINE_STATUS_FILE" | grep -q "|${stage}"; then
+				# If both sample and stage exist in the file
+				echo "$BAMFILE_NAME: $stage already done. Skipping Mutect2..."
+			else
+				echo "Running Mutect2 on normal sample: $NORMALNAME"
+				echo "Mutect2 Command: $mutect_cmd"
+				eval "$mutect_cmd"
+				update_pipeline_status "$BAMFILE_NAME" "$stage"
+			fi
 
-done
+		done
+		#======= Build sample map for GenomicsDBImport
+		sample_map="${OUTPUT_DIR}pon_sample_map.txt"
+		rm -f "$sample_map"
+		for vcf in $(find "$OUTPUT_DIR" -name "*_pon.vcf.gz"); do
+			sample=$(basename "$vcf" | cut -d'_' -f1)
+			echo "$sample $vcf" >> "$sample_map"
+		done
 
-fi
+		genomicsdb_dir="${OUTPUT_DIR}pon_db"
+		echo "Running GenomicsDBImport..."
 
-echo "++++++++++++++++++++++++++++++++++++ Mutect2 COMPLETED +++++++++++++++++++++++++++++++++++++++++"
+			./gatk --java-options "-Xmx4g -Xms4g" GenomicsDBImport --sample-name-map "$sample_map" --genomicsdb-workspace-path "$genomicsdb_dir" 
+
+			./gatk CreateSomaticPanelOfNormals -R "$REFERENCE" -V gendb://"$genomicsdb_dir" -O "$pon_output"
+
+		#========= Second running Tumor only on tumors with above PON
+		for bampath in $(echo $TumorNormalData | sed "s/,/ /g")
+		do
+			
+				TUMORNAME=$(echo "$bampath" | cut -d'#' -f1)
+				NORMALNAME=$(echo "$bampath" | cut -d'#' -f2)
+
+
+		mutect_cmd="./gatk --java-options "-Xmx4G" Mutect2 -R "${REFERENCE}" -I "${OUTPUT_DIR}""${TUMORNAME}.recal_reads.bam" -O "${OUTPUT_DIR}""${TUMORNAME}_mut.vcf.gz""
+
+		if [ -n "$germlineResource" ]; then
+		mutect_cmd="$mutect_cmd --germline-resource \"${germlineResource}\""
+		fi
+
+		# Use generated PON file
+		if [ -f "$pon_output" ]; then
+			mutect_cmd="$mutect_cmd --pon \"$pon_output\""
+		else
+				echo "Error: PON file not found at $pon_output"
+				exit 1
+		fi
+
+		if grep -q "^${TUMORNAME}|" "$PIPELINE_STATUS_FILE" && grep "^${TUMORNAME}|" "$PIPELINE_STATUS_FILE" | grep -q "|${stage}"; then
+			# If both sample and stage exist in the file
+			echo "$BAMFILE_NAME: $stage already done. Skipping Mutect2..."
+		else
+
+			echo "Running Mutect2 on tumor sample: $TUMORNAME"
+			echo "Mutect2 Command: $mutect_cmd"
+			eval "$mutect_cmd"
+			update_pipeline_status "$BAMFILE_NAME" "$TUMORNAME"
+		fi
+
+		done
+		#=====================================================================================================
+		# 		BOTH			Mutect2: 06- Mitochondrial mode
+		#=====================================================================================================
+
+	elif [ "$somaticOP" = "TUMORMIT" ]; then # Mitochondrial mode
+
+		for bampath in $(echo $BamFilesPath | sed "s/,/ /g")
+		do
+			filename=$(basename "$bampath") 
+			BAMFILE_NAME=$(echo "$filename" | sed -E 's/(\.star\.Aligned\.sortedByCoord\.out)?\.bam$//') 
+
+			mutect_cmd="./gatk --java-options "-Xmx4G" Mutect2 -R "${REFERENCE}" -L "${genomicInterval}" --mitochondria-mode -I "${OUTPUT_DIR}""${BAMFILE_NAME}.recal_reads.bam" -O "${OUTPUT_DIR}""${BAMFILE_NAME}_mut.vcf.gz""
+
+			if grep -q "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" && grep "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" | grep -q "|${stage}"; then
+				# If both sample and stage exist in the file
+				echo "$BAMFILE_NAME: $stage already done. Skipping Mutect2..."
+			else
+				echo "Mutect2 Command: $mutect_cmd"
+				eval "$mutect_cmd"
+				update_pipeline_status "$BAMFILE_NAME" "$stage"
+			fi
+		done
+		#=====================================================================================================
+		# 		BOTH			Mutect2: 07- Force calling mode
+		#=====================================================================================================
+
+	elif [ "$somaticOP" = "TUMORFOR" ]; then #Force calling mode
+
+		for bampath in $(echo $BamFilesPath | sed "s/,/ /g")
+		do
+			filename=$(basename "$bampath") 
+			BAMFILE_NAME=$(echo "$filename" | sed -E 's/(\.star\.Aligned\.sortedByCoord\.out)?\.bam$//') 
+
+			if [ -n "$TumorNormalData" ]; then
+			mutect_cmd="./gatk --java-options "-Xmx4G" Mutect2 -R \"${REFERENCE}\" -I \"${OUTPUT_DIR}${BAMFILE_NAME}.recal_reads.bam\" -alleles \"${TumorNormalData}\" -O \"${OUTPUT_DIR}${BAMFILE_NAME}_mut.vcf.gz\""
+			fi
+			if [ -n "$germlineResource" ]; then
+			mutect_cmd="./gatk --java-options "-Xmx4G" Mutect2 -R \"${REFERENCE}\" -I \"${OUTPUT_DIR}${BAMFILE_NAME}.recal_reads.bam\" --f1r2-tar-gz \"${germlineResource}\" -O \"${OUTPUT_DIR}${BAMFILE_NAME}_mut.vcf.gz\""
+			fi
+
+
+			if grep -q "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" && grep "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" | grep -q "|${stage}"; then
+				# If both sample and stage exist in the file
+				echo "$BAMFILE_NAME: $stage already done. Skipping Mutect2..."
+			else
+			echo "Mutect2 Command: $mutect_cmd"
+			eval "$mutect_cmd"
+			update_pipeline_status "$BAMFILE_NAME" "$stage"
+			fi
+
+		done
+
+	fi
+
+	echo "++++++++++++++++++++++++++++++++++++ Mutect2 COMPLETED +++++++++++++++++++++++++++++++++++++++++"
 
 fi #end BOTH
 
 
 #############################################################################################################################
-# STEP 9: VARIANT FILTRATION OPTIONS
+# STEP 8: VARIANT FILTRATION OPTIONS
 #############################################################################################################################
 # ALL, BA
 
-echo "VARIANT FILTRATION OPTION IS: $variantFilterationOp"
+echo "VARIANT FILTRATION OPTION SELECTED IS: $variantFilterationOp"
 
 if [ "$variantFilterationOp" = "ALL" ]; then
 	##################################
@@ -1326,19 +1626,33 @@ if [ "$variantFilterationOp" = "ALL" ]; then
 			case "$vcfFile" in
 				*_mut.vcf.gz)
 					if grep -q "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" && grep "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" | grep -q "|VariantFiltration_M"; then
-						echo "$BAMFILE_NAME: VariantFiltration_M already done. Skipping VariantFiltration..."
+						echo "$BAMFILE_NAME: FilterMutectCalls (VariantFiltration_M) already done. Skipping Variant Filtration ..."
 										
 					elif [ "$germSomaticOP" = "SOMATIC" ] || [ "$germSomaticOP" = "BOTH" ]; then
-						filterVariant_cmd="./gatk --java-options \"-Xms4G -Xmx16G\"  VariantFiltration -R "${REFERENCE}" -V "${vcfFile}" -O "${OUTPUT_DIR}""${BAMFILE_NAME}_MVFB.vcf""
-						if [ -z "$filterOptionsB" ]; then
-							filterVariant_cmd="$filterVariant_cmd --filter-expression \"vc.getAttribute('BaseQRankSum') < -2.0 || vc.getAttribute('MQRankSum') < -2.0\" --filter-name "LowBaseQRankSum" "
-						else
-							filterVariant_cmd="$filterVariant_cmd $filterOptionsB"
+
+						F1R2_FILE="${OUTPUT_DIR}${BAMFILE_NAME}_f1r2.tar.gz"
+                    	ORIENT_MODEL="${OUTPUT_DIR}${BAMFILE_NAME}_read_orientation_model.tar.gz"
+                    	PILEUP_TABLE="${OUTPUT_DIR}${BAMFILE_NAME}_getpileupsummaries.table"
+        				CONTAM_TABLE="${OUTPUT_DIR}${BAMFILE_NAME}_contamination.table"
+						OUT_MVFB="${OUTPUT_DIR}${BAMFILE_NAME}_MVFB.vcf"
+
+						echo "Step 1: LearnReadOrientationModel for $BAMFILE_NAME "
+                    	orient_cmd="./gatk --java-options \"-Xms4G -Xmx16G\" LearnReadOrientationModel -I \"${F1R2_FILE}\" -O \"${ORIENT_MODEL}\""
+                    	echo "Command: $orient_cmd"
+                    	eval $orient_cmd
+                    
+						if [ $? -ne 0 ]; then
+							echo "Error: LearnReadOrientationModel failed for $BAMFILE_NAME"
+							exit 1
 						fi
-						echo "VariantFiltration Command is : $filterVariant_cmd"
+
+                    	echo "Step 2: FilterMutectCalls for $BAMFILE_NAME "
+                    	filterVariant_cmd="./gatk --java-options \"-Xms4G -Xmx16G\" FilterMutectCalls -R \"${REFERENCE}\" -V \"${vcfFile}\" --ob-priors \"${ORIENT_MODEL}\" -O \"${OUT_MVFB}\""
+						
+						echo "FilterMutectCalls Command is : $filterVariant_cmd"
 						eval $filterVariant_cmd
 						if [ $? -ne 0 ]; then
-							echo "Error: VariantFiltration failed for $BAMFILE_NAME"
+							echo "Error: FilterMutectCalls failed for $BAMFILE_NAME"
 							exit 1
 						else
 							update_pipeline_status "$BAMFILE_NAME" "VariantFiltration_M"
@@ -1355,8 +1669,8 @@ if [ "$variantFilterationOp" = "ALL" ]; then
 						echo "$BAMFILE_NAME: VariantFiltration_H already done. Skipping VariantFiltration..."
 				
 					elif [ "$germSomaticOP" = "GERMLINE" ] || [ "$germSomaticOP" = "BOTH" ]; then
-					
-						filterVariant_cmd="./gatk --java-options \"-Xms4G -Xmx16G\"  VariantFiltration -R "${REFERENCE}" -V "${vcfFile}" -O "${OUTPUT_DIR}""${BAMFILE_NAME}_HVFB.vcf""
+						#\"-Xms2G -Xmx4G\"
+						filterVariant_cmd="./gatk --java-options \"-Djava.awt.headless=true -Xms1G -Xmx3G -XX:+UseG1GC\"  VariantFiltration -R "${REFERENCE}" -V "${vcfFile}" -O "${OUTPUT_DIR}""${BAMFILE_NAME}_HVFB.vcf""
 
 						if [ -z "$filterOptionsB" ]; then
 							
@@ -1372,6 +1686,7 @@ if [ "$variantFilterationOp" = "ALL" ]; then
 							exit 1
 						else
 							update_pipeline_status "$BAMFILE_NAME" "VariantFiltration_H"
+							sleep 2
 						fi
 						
 					fi
@@ -1411,7 +1726,7 @@ if [ "$variantFilterationOp" = "ALL" ]; then
 						elif [ "$germSomaticOP" = "SOMATIC" ] || [ "$germSomaticOP" = "BOTH" ]; then
 							selectVariant_cmd="./gatk --java-options "-Xmx4G"  SelectVariants -R "${REFERENCE}" -V "${vcfFile}" -O "${OUTPUT_DIR}""${BAMFILE_NAME}_mselvar.vcf""
 
-							selectVariant_cmd="$selectVariant_cmd $selectVariantStr"
+							selectVariant_cmd="$selectVariant_cmd $selectVariantStr  --exclude-filtered true"
 							echo "SelectVariants Command: $selectVariant_cmd"
 							eval $selectVariant_cmd
 							if [ $? -ne 0 ]; then
@@ -1439,8 +1754,8 @@ if [ "$variantFilterationOp" = "ALL" ]; then
 					
 					elif [ "$germSomaticOP" = "GERMLINE" ] || [ "$germSomaticOP" = "BOTH" ]; then
 					
-						selectVariant_cmd="./gatk --java-options \"-Xms4G -Xmx4G\"  SelectVariants -R "${REFERENCE}" -V "${vcfFile}" -O "${OUTPUT_DIR}${BAMFILE_NAME}_hselvar.vcf""
-						selectVariant_cmd="$selectVariant_cmd $selectVariantStr"
+						selectVariant_cmd="./gatk --java-options \"-Xms2G -Xmx4G\"  SelectVariants -R "${REFERENCE}" -V "${vcfFile}" -O "${OUTPUT_DIR}${BAMFILE_NAME}_hselvar.vcf""
+						selectVariant_cmd="$selectVariant_cmd $selectVariantStr  --exclude-filtered true"
 						echo "SelectVariant Command: $selectVariant_cmd"
 
 						eval $selectVariant_cmd
@@ -1466,8 +1781,8 @@ if [ "$variantFilterationOp" = "ALL" ]; then
 	# snpEFF ONLY
 	if [ "$annotationOPtion" = "snpeff" ]; then
 		# ------------------------------------
-		#  germline ( _hselvar.vcf ---> .annH.vcf )
-		#  somatic  ( _mselvar.vcf ---> .annM.vcf )
+		#  germline ( _hselvar.vcf ---> .annH.vcf ), VEP _vep_annH.vcf
+		#  somatic  ( _mselvar.vcf ---> .annM.vcf ), VEP _vep_annM.vcf
 		
 		#First check database available or not and then install
 		# Check if the database is already installed
@@ -1519,7 +1834,7 @@ if [ "$variantFilterationOp" = "ALL" ]; then
 					elif [ "$germSomaticOP" = "GERMLINE" ] || [ "$germSomaticOP" = "BOTH" ]; then
 						echo "Annotating GERMLINE variant: $filename"
 					
-						java -Xmx8g -jar "$snpEff_path" -q -canon -csvStats "${OUTPUT_DIR}${BAMFILE_NAME}.annH.csv" -stats "${OUTPUT_DIR}${BAMFILE_NAME}.annH.html" "$snpEff_db" "$vcfFile" > "${OUTPUT_DIR}${BAMFILE_NAME}.annH.vcf"
+						java -Xmx4g -jar "$snpEff_path" -q -canon -csvStats "${OUTPUT_DIR}${BAMFILE_NAME}.annH.csv" -stats "${OUTPUT_DIR}${BAMFILE_NAME}.annH.html" "$snpEff_db" "$vcfFile" > "${OUTPUT_DIR}${BAMFILE_NAME}.annH.vcf"
 						if [ $? -ne 0 ]; then
 							echo "Error: snpEff failed for $BAMFILE_NAME"
 							exit 1
@@ -1742,12 +2057,34 @@ if [ "$variantFilterationOp" = "ALL" ]; then
 	##################################
 	# ALL: STEP 9.: Filteration: snpSIFT
 
-	echo "Performing Filteration after annotation using SnpSIFT..."
-	echo "Debug: ALL $vcfFiles"
+	echo "Performing SnpSIFT annotation & filtering ..."
 	#CorrectionDone
 	FILTER_LOG_FILE="${OUTPUT_DIR}/filtration_counts.csv"
 	echo "Sample,Pipeline_Stage,Raw_Variants,Filtered_Variants,Removed_Variants,Retention_Pct" > "$FILTER_LOG_FILE"
-		
+
+	RESOLVED_GNOMAD=""
+	if [ -n "$ANNOT_GNOMAD" ]; then
+		if [ -d "$ANNOT_GNOMAD" ]; then
+			echo "gnomAD directory detected. Building file list..."
+			RESOLVED_GNOMAD=$(find "$ANNOT_GNOMAD" -maxdepth 1 -name "*.vcf.gz" | paste -sd, -)
+		elif [ -f "$ANNOT_GNOMAD" ]; then
+			RESOLVED_GNOMAD="$ANNOT_GNOMAD"
+		fi
+	fi
+
+	# 1B. Construct space-separated database argument for SnpSift
+	# 1B. Build the -tabix options string
+	SNPSIFT_DBS=""
+	[ -n "$RESOLVED_GNOMAD" ] && SNPSIFT_DBS="$SNPSIFT_DBS $RESOLVED_GNOMAD"
+	[ -f "$ANNOT_DBSNP" ]     && SNPSIFT_DBS="$SNPSIFT_DBS $ANNOT_DBSNP"
+	[ -f "$ANNOT_CLINVAR" ]   && SNPSIFT_DBS="$SNPSIFT_DBS $ANNOT_CLINVAR"
+
+	# Trim leading spaces
+	SNPSIFT_DBS=$(echo "$SNPSIFT_DBS" | xargs)
+
+	# Log detected databases
+	echo "SnpSift Database Targets: ${SNPSIFT_DBS:-None specified}"
+
 	for vcfFile in $vcfFiles; do
 		if [ -f "$vcfFile" ]; then 
 			filename=$(basename "$vcfFile") 
@@ -1762,12 +2099,51 @@ if [ "$variantFilterationOp" = "ALL" ]; then
 					elif [ "$germSomaticOP" = "SOMATIC" ] || [ "$germSomaticOP" = "BOTH" ]; then
 						echo "Annotating SOMATIC variant (EXON): $filename"
 						
-						#CorrectionDone
 						ACTIVE_FILTER=$(get_active_filter "$filterOptionsA" "VEP")
 						# 1. Count raw variants before filtering
                     	RAW_COUNT=$(grep -vc "^#" "$vcfFile")
-						echo "java -Xmx8g -jar "$snpSift" filter "$ACTIVE_FILTER" "$vcfFile" >  "${OUTPUT_DIR}${BAMFILE_NAME}_vep_annM.sift.vcf""
-						java -Xmx8g -jar "$snpSift" filter "$ACTIVE_FILTER" "$vcfFile" >  "${OUTPUT_DIR}${BAMFILE_NAME}_vep_annM.sift.vcf"
+						
+						# --- STEP A: INLINE ANNOTATION ---
+                    	ANNOT_VCF="${OUTPUT_DIR}${BAMFILE_NAME}_vep_annM.annot.vcf"
+						# --- STEP A: INLINE ANNOTATION ---
+						if [ -n "$SNPSIFT_DBS" ]; then
+							CURRENT_INPUT="$vcfFile"
+							STEP_NUM=1
+
+							for db in $SNPSIFT_DBS; do
+								echo "Running SnpSift annotate with DB: $db"
+							
+								# Unique temporary output for each database pass
+								TMP_OUT="${OUTPUT_DIR}${BAMFILE_NAME}_tmp_pass_${STEP_NUM}.vcf"
+								echo "Running command: java -Xmx4g -jar $snpSift annotate -tabix $db $CURRENT_INPUT > $TMP_OUT"
+								java -Xmx4g -jar "$snpSift" annotate -tabix "$db" "$CURRENT_INPUT" > "$TMP_OUT"
+							
+								# Check if SnpSift succeeded AND created a non-empty output
+								if [ $? -ne 0 ] || [ ! -s "$TMP_OUT" ]; then
+									echo "Error: SnpSIFT Annotation failed or produced empty file for $BAMFILE_NAME on DB $db"
+									rm -f "$TMP_OUT"
+									exit 1
+								fi
+
+								# Remove previous pass temporary file (unless it was the original input)
+								if [ "$CURRENT_INPUT" != "$vcfFile" ]; then
+									rm -f "$CURRENT_INPUT"
+								fi
+
+								# Advance input to the newly created VCF pass
+								CURRENT_INPUT="$TMP_OUT"
+								STEP_NUM=$((STEP_NUM + 1))
+							done
+						
+							# Move the final non-empty pass to your target annotated VCF name
+							mv "$CURRENT_INPUT" "$ANNOT_VCF"
+						else
+							echo "No annotation databases provided. Skipping SnpSift annotate stage..."
+							cp "$vcfFile" "$ANNOT_VCF"
+						fi
+						# --- STEP B: FILTER ANNOTATED VCF ---
+						echo "java -Xmx8g -jar $snpSift filter $ACTIVE_FILTER $ANNOT_VCF >  ${OUTPUT_DIR}${BAMFILE_NAME}_vep_annM.sift.vcf"
+						java -Xmx8g -jar "$snpSift" filter "$ACTIVE_FILTER" "$ANNOT_VCF" >  "${OUTPUT_DIR}${BAMFILE_NAME}_vep_annM.sift.vcf"
 												
 						if [ $? -ne 0 ]; then
 							echo "Error: SnpSIFT failed for $BAMFILE_NAME"
@@ -1784,6 +2160,7 @@ if [ "$variantFilterationOp" = "ALL" ]; then
 	                        # 3. Append counts to CSV log
                         	echo "${BAMFILE_NAME},Somatic_VEP,${RAW_COUNT},${FILTERED_COUNT},${REMOVED_COUNT},${RETENTION_PCT}\%" >> "$FILTER_LOG_FILE"
 							update_pipeline_status "$BAMFILE_NAME" "SnpSIFT(VEP)_M"
+							rm -f "$ANNOT_VCF" # Optional: remove intermediate annotated file to save disk space
 						fi
 						
 					fi
@@ -1797,16 +2174,52 @@ if [ "$variantFilterationOp" = "ALL" ]; then
 						echo "$BAMFILE_NAME: SnpSIFT(VEP)_H already done. Skipping SNPSIFT..."
 					elif [ "$germSomaticOP" = "GERMLINE" ] || [ "$germSomaticOP" = "BOTH" ]; then
 						echo "Annotating GERMLINE variant: $filename"
-						#CorrectionDone
+						
 						ACTIVE_FILTER=$(get_active_filter "$filterOptionsA" "VEP")
 						# 1. Count raw variants before filtering
                     	RAW_COUNT=$(grep -vc "^#" "$vcfFile")
 						
-						echo "FilterOptionsA: $filterOptionsA"
-						echo "ActiveFilter: $ACTIVE_FILTER"
-						echo "java -Xmx8g -jar "$snpSift" filter "$ACTIVE_FILTER" "$vcfFile" > "${OUTPUT_DIR}${BAMFILE_NAME}_vep_annH.sift.vcf""
-						java -Xmx8g -jar "$snpSift" filter "$ACTIVE_FILTER" "$vcfFile" > "${OUTPUT_DIR}${BAMFILE_NAME}_vep_annH.sift.vcf"
+						# --- STEP A: INLINE ANNOTATION ---
+						ANNOT_VCF="${OUTPUT_DIR}${BAMFILE_NAME}_vep_annH.annot.vcf"
+						if [ -n "$SNPSIFT_DBS" ]; then
+							CURRENT_INPUT="$vcfFile"
+							STEP_NUM=1
+
+							for db in $SNPSIFT_DBS; do
+								echo "Running SnpSift annotate with DB: $db"
+							
+								# Unique temporary output for each database pass
+								TMP_OUT="${OUTPUT_DIR}${BAMFILE_NAME}_tmp_pass_${STEP_NUM}.vcf"
+								echo "Running command: java -Xmx4g -jar $snpSift annotate -tabix $db $CURRENT_INPUT > $TMP_OUT"
+								java -Xmx4g -jar "$snpSift" annotate -tabix "$db" "$CURRENT_INPUT" > "$TMP_OUT"
+							
+								# Check if SnpSift succeeded AND created a non-empty output
+								if [ $? -ne 0 ] || [ ! -s "$TMP_OUT" ]; then
+									echo "Error: SnpSIFT Annotation failed or produced empty file for $BAMFILE_NAME on DB $db"
+									rm -f "$TMP_OUT"
+									exit 1
+								fi
+
+								# Remove previous pass temporary file (unless it was the original input)
+								if [ "$CURRENT_INPUT" != "$vcfFile" ]; then
+									rm -f "$CURRENT_INPUT"
+								fi
+
+								# Advance input to the newly created VCF pass
+								CURRENT_INPUT="$TMP_OUT"
+								STEP_NUM=$((STEP_NUM + 1))
+							done
 						
+							# Move the final non-empty pass to your target annotated VCF name
+							mv "$CURRENT_INPUT" "$ANNOT_VCF"
+						else
+							echo "No annotation databases provided. Skipping SnpSift annotate stage..."
+							cp "$vcfFile" "$ANNOT_VCF"
+						fi
+
+						# --- STEP B: FILTER ANNOTATED VCF ---
+						echo "java -Xmx4g -jar $snpSift filter $ACTIVE_FILTER $ANNOT_VCF > ${OUTPUT_DIR}${BAMFILE_NAME}_vep_annH.sift.vcf"
+						java -Xmx4g -jar "$snpSift" filter "$ACTIVE_FILTER" "$ANNOT_VCF" > "${OUTPUT_DIR}${BAMFILE_NAME}_vep_annH.sift.vcf"
 						if [ $? -ne 0 ]; then
 							echo "Error: SnpSIFT failed for $BAMFILE_NAME"
 							exit 1
@@ -1823,6 +2236,7 @@ if [ "$variantFilterationOp" = "ALL" ]; then
                         	# 3. Append counts to CSV log
                         	echo "${BAMFILE_NAME},Germline_VEP,${RAW_COUNT},${FILTERED_COUNT},${REMOVED_COUNT},${RETENTION_PCT}\%" >> "$FILTER_LOG_FILE"
 							update_pipeline_status "$BAMFILE_NAME" "SnpSIFT(VEP)_H"
+							rm -f "$ANNOT_VCF"
 						fi
 						
 					fi
@@ -1835,14 +2249,52 @@ if [ "$variantFilterationOp" = "ALL" ]; then
 						echo "$BAMFILE_NAME: SnpSIFT(snpEff)_M already done. Skipping SNPSIFT..."
 					elif [ "$germSomaticOP" = "SOMATIC" ] || [ "$germSomaticOP" = "BOTH" ]; then
 						echo "Annotating SOMATIC variant (EXON): $filename"
-						#CorrectionDone
 						
 						ACTIVE_FILTER=$(get_active_filter "$filterOptionsA" "SNPEFF")
 						# 1. Count raw variants before filtering
                     	RAW_COUNT=$(grep -vc "^#" "$vcfFile")
 						
-						echo "java -Xmx8g -jar "$snpSift" filter "$ACTIVE_FILTER" "$vcfFile" > "${OUTPUT_DIR}${BAMFILE_NAME}.annM.sift.vcf""
-						java -Xmx8g -jar "$snpSift" filter "$ACTIVE_FILTER" "$vcfFile" > "${OUTPUT_DIR}${BAMFILE_NAME}.annM.sift.vcf"
+						# --- STEP A: INLINE ANNOTATION ---
+						ANNOT_VCF="${OUTPUT_DIR}${BAMFILE_NAME}.annM.annot.vcf"
+						
+						if [ -n "$SNPSIFT_DBS" ]; then
+							CURRENT_INPUT="$vcfFile"
+							STEP_NUM=1
+							for db in $SNPSIFT_DBS; do
+							echo "Running SnpSift annotate with DB: $db"
+							
+							# Unique temporary output for each database pass
+							TMP_OUT="${OUTPUT_DIR}${BAMFILE_NAME}_tmp_pass_${STEP_NUM}.vcf"
+							echo "Running command: java -Xmx4g -jar $snpSift annotate -tabix $db $CURRENT_INPUT > $TMP_OUT"
+							java -Xmx4g -jar "$snpSift" annotate -tabix "$db" "$CURRENT_INPUT" > "$TMP_OUT"
+							
+							# Check if SnpSift succeeded AND created a non-empty output
+							if [ $? -ne 0 ] || [ ! -s "$TMP_OUT" ]; then
+								echo "Error: SnpSIFT Annotation failed or produced empty file for $BAMFILE_NAME on DB $db"
+								rm -f "$TMP_OUT"
+								exit 1
+							fi
+
+							# Remove previous pass temporary file (unless it was the original input)
+							if [ "$CURRENT_INPUT" != "$vcfFile" ]; then
+								rm -f "$CURRENT_INPUT"
+							fi
+
+							# Advance input to the newly created VCF pass
+							CURRENT_INPUT="$TMP_OUT"
+							STEP_NUM=$((STEP_NUM + 1))
+						done
+						
+						# Move the final non-empty pass to your target annotated VCF name
+						mv "$CURRENT_INPUT" "$ANNOT_VCF"
+					else
+						echo "No annotation databases provided. Skipping SnpSift annotate stage..."
+						cp "$vcfFile" "$ANNOT_VCF"
+					fi
+							
+						# --- STEP B: FILTER ANNOTATED VCF ---
+						echo "java -Xmx8g -jar $snpSift filter $ACTIVE_FILTER $ANNOT_VCF > ${OUTPUT_DIR}${BAMFILE_NAME}.annM.sift.vcf"
+						java -Xmx8g -jar "$snpSift" filter "$ACTIVE_FILTER" "$ANNOT_VCF" > "${OUTPUT_DIR}${BAMFILE_NAME}.annM.sift.vcf"
 						
 						if [ $? -ne 0 ]; then
 							echo "Error: SnpSIFT failed for $BAMFILE_NAME"
@@ -1861,6 +2313,7 @@ if [ "$variantFilterationOp" = "ALL" ]; then
                         	# 3. Append counts to CSV log
                         	echo "${BAMFILE_NAME},Somatic_SnpEff,${RAW_COUNT},${FILTERED_COUNT},${REMOVED_COUNT},${RETENTION_PCT}\%" >> "$FILTER_LOG_FILE"
 							update_pipeline_status "$BAMFILE_NAME" "SnpSIFT(snpEff)_M"
+							rm -f "$ANNOT_VCF"
 						fi
 						
 					fi
@@ -1873,17 +2326,53 @@ if [ "$variantFilterationOp" = "ALL" ]; then
 					elif [ "$germSomaticOP" = "GERMLINE" ] || [ "$germSomaticOP" = "BOTH" ]; then
 						echo "Annotating GERMLINE variant: $filename"
 						
-						#CorrectionDone
-						
 						ACTIVE_FILTER=$(get_active_filter "$filterOptionsA" "SNPEFF")
-						echo "FilterOptionsA: $filterOptionsA"
-						echo "ActiveFilter: $ACTIVE_FILTER"
+						
 						# 1. Count raw variants before filtering
                     	RAW_COUNT=$(grep -vc "^#" "$vcfFile")
 						
-						echo "java -Xmx8g -jar "$snpSift" filter "$ACTIVE_FILTER" "$vcfFile" > "${OUTPUT_DIR}${BAMFILE_NAME}.annH.sift.vcf""
-						java -Xmx8g -jar "$snpSift" filter "$ACTIVE_FILTER" "$vcfFile" > "${OUTPUT_DIR}${BAMFILE_NAME}.annH.sift.vcf"
+						# --- STEP A: INLINE ANNOTATION ---
+						ANNOT_VCF="${OUTPUT_DIR}${BAMFILE_NAME}.annH.annot.vcf"
+				
+						if [ -n "$SNPSIFT_DBS" ]; then
+							CURRENT_INPUT="$vcfFile"
+							STEP_NUM=1
+
+							for db in $SNPSIFT_DBS; do
+								echo "Running SnpSift annotate with DB: $db"
+							
+								# Unique temporary output for each database pass
+								TMP_OUT="${OUTPUT_DIR}${BAMFILE_NAME}_tmp_pass_${STEP_NUM}.vcf"
+								echo "Running command: java -Xmx4g -jar $snpSift annotate -tabix $db $CURRENT_INPUT > $TMP_OUT"
+								java -Xmx4g -jar "$snpSift" annotate -tabix "$db" "$CURRENT_INPUT" > "$TMP_OUT"
+							
+								# Check if SnpSift succeeded AND created a non-empty output
+								if [ $? -ne 0 ] || [ ! -s "$TMP_OUT" ]; then
+									echo "Error: SnpSIFT Annotation failed or produced empty file for $BAMFILE_NAME on DB $db"
+									rm -f "$TMP_OUT"
+									exit 1
+								fi
+
+								# Remove previous pass temporary file (unless it was the original input)
+								if [ "$CURRENT_INPUT" != "$vcfFile" ]; then
+									rm -f "$CURRENT_INPUT"
+								fi
+
+								# Advance input to the newly created VCF pass
+								CURRENT_INPUT="$TMP_OUT"
+								STEP_NUM=$((STEP_NUM + 1))
+							done
 						
+						# Move the final non-empty pass to your target annotated VCF name
+						mv "$CURRENT_INPUT" "$ANNOT_VCF"
+					else
+						echo "No annotation databases provided. Skipping SnpSift annotate stage..."
+						cp "$vcfFile" "$ANNOT_VCF"
+					fi
+						
+						# --- STEP B: FILTER ANNOTATED VCF ---
+						echo "java -Xmx4g -jar $snpSift filter $ACTIVE_FILTER $ANNOT_VCF > ${OUTPUT_DIR}${BAMFILE_NAME}.annH.sift.vcf"
+						java -Xmx4g -jar "$snpSift" filter "$ACTIVE_FILTER" "$ANNOT_VCF" > "${OUTPUT_DIR}${BAMFILE_NAME}.annH.sift.vcf"
 						if [ $? -ne 0 ]; then
 							echo "Error: SnpSIFT failed for $BAMFILE_NAME"
 							exit 1
@@ -1899,6 +2388,8 @@ if [ "$variantFilterationOp" = "ALL" ]; then
                 	        # 3. Append counts to CSV log
                     	    echo "${BAMFILE_NAME},Germline_SnpEff,${RAW_COUNT},${FILTERED_COUNT},${REMOVED_COUNT},${RETENTION_PCT}\%" >> "$FILTER_LOG_FILE"
 							update_pipeline_status "$BAMFILE_NAME" "SnpSIFT(snpEff)_H"
+							echo "Removing temporary intermediate annotated file $ANNOT_VCF"
+							rm -f "$ANNOT_VCF"
 						fi
 						
 					fi
@@ -1909,49 +2400,44 @@ if [ "$variantFilterationOp" = "ALL" ]; then
 		fi
 	done
 
-echo "Appending total summary to the counts file...."
+	echo "Appending total summary to the counts file...."
 
-if [ -f "$FILTER_LOG_FILE" ] && [ $(wc -l < "$FILTER_LOG_FILE") -gt 1 ]; then
-    awk -F',' '
-    NR > 1 {
-        stage = $2
-        count[stage]++
-        raw[stage] += $3
-        filt[stage] += $4
-        rem[stage] += $5
-        
-        tot_count++
-        tot_raw += $3
-        tot_filt += $4
-        tot_rem += $5
-    }
-    END {
-        # Print sub-totals per stage tag (e.g. TOTAL_Germline_SnpEff)
-        for (st in count) {
-            pct = (raw[st] > 0) ? (filt[st] / raw[st]) * 100 : 0
-            printf "TOTAL_%s (%d Samples),%s,%d,%d,%d,%.2f%%\n", st, count[st], st, raw[st], filt[st], rem[st], pct
-        }
-        
-        # Print overall combined summary if multiple stages were run
-        if (length(count) > 1) {
-            tot_pct = (tot_raw > 0) ? (tot_filt / tot_raw) * 100 : 0
-            printf "TOTAL_COMBINED (%d Records),Combined,%d,%d,%d,%.2f%%\n", tot_count, tot_raw, tot_filt, tot_rem, tot_pct
-        }
-    }' "$FILTER_LOG_FILE" >> "$FILTER_LOG_FILE"
-fi
-
-
-
-
-
-	echo "++++++++++++++++++++++++++++++++++++ VariantFiltration AFTER COMPLETED +++++++++++++++++++++++++++++++++++++++++"
+	if [ -f "$FILTER_LOG_FILE" ] && [ $(wc -l < "$FILTER_LOG_FILE") -gt 1 ]; then
+		awk -F',' '
+		NR > 1 {
+			stage = $2
+			count[stage]++
+			raw[stage] += $3
+			filt[stage] += $4
+			rem[stage] += $5
+			
+			tot_count++
+			tot_raw += $3
+			tot_filt += $4
+			tot_rem += $5
+		}
+		END {
+			# Print sub-totals per stage tag (e.g. TOTAL_Germline_SnpEff)
+			for (st in count) {
+				pct = (raw[st] > 0) ? (filt[st] / raw[st]) * 100 : 0
+				printf "TOTAL_%s (%d Samples),%s,%d,%d,%d,%.2f%%\n", st, count[st], st, raw[st], filt[st], rem[st], pct
+			}
+			
+			# Print overall combined summary if multiple stages were run
+			if (length(count) > 1) {
+				tot_pct = (tot_raw > 0) ? (tot_filt / tot_raw) * 100 : 0
+				printf "TOTAL_COMBINED (%d Records),Combined,%d,%d,%d,%.2f%%\n", tot_count, tot_raw, tot_filt, tot_rem, tot_pct
+			}
+		}' "$FILTER_LOG_FILE" >> "$FILTER_LOG_FILE"
+	fi
+	echo "++++++++++++++++++++++++++++++++++++ SnpSIFT Annotation & Filtration  COMPLETED +++++++++++++++++++++++++++++++++++++++++"
 
 	##################################
 	# ALL END: 
 	##################################
 elif [ "$variantFilterationOp" = "BA" ]; then
 	##################################
-	# BA Start: 
+	# BA Start: VariantFiltration+ Annotation (SNP,VEP)+SNPSIFT(Annotation+Filteration) 
 	##################################
 	# ALL:STEP 9.1: VariantFiltration BEFORE: Filter variant calls based on INFO and/or FORMAT annotations
 	# ------------------------------------
@@ -1972,19 +2458,33 @@ elif [ "$variantFilterationOp" = "BA" ]; then
 			case "$vcfFile" in
 				*_mut.vcf.gz)
 					if grep -q "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" && grep "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" | grep -q "|VariantFiltration_M"; then
-						echo "$BAMFILE_NAME: VariantFiltration_M already done. Skipping VariantFiltration..."
+						echo "$BAMFILE_NAME: FilterMutectCalls (VariantFiltration_M) already done. Skipping Variant Filtration ..."
 										
 					elif [ "$germSomaticOP" = "SOMATIC" ] || [ "$germSomaticOP" = "BOTH" ]; then
-						filterVariant_cmd="./gatk --java-options \"-Xms4G -Xmx16G\"  VariantFiltration -R "${REFERENCE}" -V "${vcfFile}" -O "${OUTPUT_DIR}""${BAMFILE_NAME}_MVFB.vcf""
-						if [ -z "$filterOptionsB" ]; then
-							filterVariant_cmd="$filterVariant_cmd --filter-expression \"vc.getAttribute('BaseQRankSum') < -2.0 || vc.getAttribute('MQRankSum') < -2.0\" --filter-name "LowBaseQRankSum" "
-						else
-							filterVariant_cmd="$filterVariant_cmd $filterOptionsB"
+
+						F1R2_FILE="${OUTPUT_DIR}${BAMFILE_NAME}_f1r2.tar.gz"
+                    	ORIENT_MODEL="${OUTPUT_DIR}${BAMFILE_NAME}_read_orientation_model.tar.gz"
+                    	PILEUP_TABLE="${OUTPUT_DIR}${BAMFILE_NAME}_getpileupsummaries.table"
+        				CONTAM_TABLE="${OUTPUT_DIR}${BAMFILE_NAME}_contamination.table"
+						OUT_MVFB="${OUTPUT_DIR}${BAMFILE_NAME}_MVFB.vcf"
+
+						echo "Step 1: LearnReadOrientationModel for $BAMFILE_NAME "
+                    	orient_cmd="./gatk --java-options \"-Xms4G -Xmx16G\" LearnReadOrientationModel -I \"${F1R2_FILE}\" -O \"${ORIENT_MODEL}\""
+                    	echo "Command: $orient_cmd"
+                    	eval $orient_cmd
+                    
+						if [ $? -ne 0 ]; then
+							echo "Error: LearnReadOrientationModel failed for $BAMFILE_NAME"
+							exit 1
 						fi
-						echo "VariantFiltration Command is : $filterVariant_cmd"
+
+                    	echo "Step 2: FilterMutectCalls for $BAMFILE_NAME "
+                    	filterVariant_cmd="./gatk --java-options \"-Xms4G -Xmx16G\" FilterMutectCalls -R \"${REFERENCE}\" -V \"${vcfFile}\" --ob-priors \"${ORIENT_MODEL}\" -O \"${OUT_MVFB}\""
+						
+						echo "FilterMutectCalls Command is : $filterVariant_cmd"
 						eval $filterVariant_cmd
 						if [ $? -ne 0 ]; then
-							echo "Error: VariantFiltration failed for $BAMFILE_NAME"
+							echo "Error: FilterMutectCalls failed for $BAMFILE_NAME"
 							exit 1
 						else
 							update_pipeline_status "$BAMFILE_NAME" "VariantFiltration_M"
@@ -2297,9 +2797,33 @@ elif [ "$variantFilterationOp" = "BA" ]; then
 	fi
 	##################################
 	# ALL: STEP 9.4: Filteration: snpSIFT
-	echo "Performing Filteration after annotation using SnpSIFT..."
-	echo "Debug: BA-->Both"
-		for vcfFile in $vcfFiles; do
+		echo "Performing SnpSIFT annotation & filtering ..."
+
+
+	RESOLVED_GNOMAD=""
+	if [ -n "$ANNOT_GNOMAD" ]; then
+		if [ -d "$ANNOT_GNOMAD" ]; then
+			echo "gnomAD directory detected. Building file list..."
+			RESOLVED_GNOMAD=$(find "$ANNOT_GNOMAD" -maxdepth 1 -name "*.vcf.gz" | paste -sd, -)
+		elif [ -f "$ANNOT_GNOMAD" ]; then
+			RESOLVED_GNOMAD="$ANNOT_GNOMAD"
+		fi
+	fi
+
+	# 1B. Construct space-separated database argument for SnpSift
+	# 1B. Build the -tabix options string
+	SNPSIFT_DBS=""
+	[ -n "$RESOLVED_GNOMAD" ] && SNPSIFT_DBS="$SNPSIFT_DBS $RESOLVED_GNOMAD"
+	[ -f "$ANNOT_DBSNP" ]     && SNPSIFT_DBS="$SNPSIFT_DBS $ANNOT_DBSNP"
+	[ -f "$ANNOT_CLINVAR" ]   && SNPSIFT_DBS="$SNPSIFT_DBS $ANNOT_CLINVAR"
+
+	# Trim leading spaces
+	SNPSIFT_DBS=$(echo "$SNPSIFT_DBS" | xargs)
+
+	# Log detected databases
+	echo "SnpSift Database Targets: ${SNPSIFT_DBS:-None specified}"
+
+	for vcfFile in $vcfFiles; do
 		if [ -f "$vcfFile" ]; then 
 			filename=$(basename "$vcfFile") 
 
@@ -2312,43 +2836,145 @@ elif [ "$variantFilterationOp" = "BA" ]; then
 				
 					elif [ "$germSomaticOP" = "SOMATIC" ] || [ "$germSomaticOP" = "BOTH" ]; then
 						echo "Annotating SOMATIC variant (EXON): $filename"
+						
 						ACTIVE_FILTER=$(get_active_filter "$filterOptionsA" "VEP")
-						echo "java -Xmx8g -jar "$snpSift" filter "'$ACTIVE_FILTER'" "$vcfFile" > "${OUTPUT_DIR}${BAMFILE_NAME}_vep_annM.sift.vcf""
-						java -Xmx8g -jar "$snpSift" filter "'$ACTIVE_FILTER'" "$vcfFile" > "${OUTPUT_DIR}${BAMFILE_NAME}_vep_annM.sift.vcf"
+						# 1. Count raw variants before filtering
+                    	RAW_COUNT=$(grep -vc "^#" "$vcfFile")
 						
-						#CorrectionDone
-						#java -Xmx8g -jar "$snpEff_path" -q -canon -csvStats "${OUTPUT_DIR}${BAMFILE_NAME}_vep_annM.csv" -stats "${OUTPUT_DIR}${BAMFILE_NAME}_vep_annM.html" "$snpEff_db" "$vcfFile" > "${OUTPUT_DIR}${BAMFILE_NAME}_vep_annM.sift.vcf"
+						# --- STEP A: INLINE ANNOTATION ---
+                    	ANNOT_VCF="${OUTPUT_DIR}${BAMFILE_NAME}_vep_annM.annot.vcf"
+						# --- STEP A: INLINE ANNOTATION ---
+						if [ -n "$SNPSIFT_DBS" ]; then
+							CURRENT_INPUT="$vcfFile"
+							STEP_NUM=1
+
+							for db in $SNPSIFT_DBS; do
+								echo "Running SnpSift annotate with DB: $db"
+							
+								# Unique temporary output for each database pass
+								TMP_OUT="${OUTPUT_DIR}${BAMFILE_NAME}_tmp_pass_${STEP_NUM}.vcf"
+								echo "Running command: java -Xmx4g -jar $snpSift annotate -tabix $db $CURRENT_INPUT > $TMP_OUT"
+								java -Xmx4g -jar "$snpSift" annotate -tabix "$db" "$CURRENT_INPUT" > "$TMP_OUT"
+							
+								# Check if SnpSift succeeded AND created a non-empty output
+								if [ $? -ne 0 ] || [ ! -s "$TMP_OUT" ]; then
+									echo "Error: SnpSIFT Annotation failed or produced empty file for $BAMFILE_NAME on DB $db"
+									rm -f "$TMP_OUT"
+									exit 1
+								fi
+
+								# Remove previous pass temporary file (unless it was the original input)
+								if [ "$CURRENT_INPUT" != "$vcfFile" ]; then
+									rm -f "$CURRENT_INPUT"
+								fi
+
+								# Advance input to the newly created VCF pass
+								CURRENT_INPUT="$TMP_OUT"
+								STEP_NUM=$((STEP_NUM + 1))
+							done
 						
+							# Move the final non-empty pass to your target annotated VCF name
+							mv "$CURRENT_INPUT" "$ANNOT_VCF"
+						else
+							echo "No annotation databases provided. Skipping SnpSift annotate stage..."
+							cp "$vcfFile" "$ANNOT_VCF"
+						fi
+						# --- STEP B: FILTER ANNOTATED VCF ---
+						echo "java -Xmx8g -jar $snpSift filter $ACTIVE_FILTER $ANNOT_VCF >  ${OUTPUT_DIR}${BAMFILE_NAME}_vep_annM.sift.vcf"
+						java -Xmx8g -jar "$snpSift" filter "$ACTIVE_FILTER" "$ANNOT_VCF" >  "${OUTPUT_DIR}${BAMFILE_NAME}_vep_annM.sift.vcf"
+												
 						if [ $? -ne 0 ]; then
 							echo "Error: SnpSIFT failed for $BAMFILE_NAME"
 							exit 1
 						else
+							# 2. Count variants after SnpSift filtering
+                        	OUT_VCF="${OUTPUT_DIR}${BAMFILE_NAME}_vep_annM.sift.vcf"
+                        	FILTERED_COUNT=$(grep -vc "^#" "$OUT_VCF")
+                        	REMOVED_COUNT=$((RAW_COUNT - FILTERED_COUNT))
+                            RETENTION_PCT="0.00"
+                        	if [ "$RAW_COUNT" -gt 0 ]; then
+                            	RETENTION_PCT=$(awk -v f="$FILTERED_COUNT" -v r="$RAW_COUNT" 'BEGIN {printf "%.2f", (f/r)*100}')
+                        	fi
+	                        # 3. Append counts to CSV log
+                        	echo "${BAMFILE_NAME},Somatic_VEP,${RAW_COUNT},${FILTERED_COUNT},${REMOVED_COUNT},${RETENTION_PCT}\%" >> "$FILTER_LOG_FILE"
 							update_pipeline_status "$BAMFILE_NAME" "SnpSIFT(VEP)_M"
+							rm -f "$ANNOT_VCF" # Optional: remove intermediate annotated file to save disk space
 						fi
 						
 					fi
 					
 							;;
 				*_vep_annH.vcf)
-				
+
 					BAMFILE_NAME=$(echo "$filename" | sed 's/_vep_annH\.vcf$//')
-					
 					if grep -q "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" && grep "^${BAMFILE_NAME}|" "$PIPELINE_STATUS_FILE" | grep -q "|SnpSIFT(VEP)_H"; then
 						# If both sample and stage exist in the file
 						echo "$BAMFILE_NAME: SnpSIFT(VEP)_H already done. Skipping SNPSIFT..."
 					elif [ "$germSomaticOP" = "GERMLINE" ] || [ "$germSomaticOP" = "BOTH" ]; then
-						echo "Annotating SOMATIC variant (EXON): $filename"
-						#CorrectionDone
-						#java -Xmx8g -jar "$snpEff_path" -q -canon -csvStats "${OUTPUT_DIR}${BAMFILE_NAME}_vep_annH.csv" -stats "${OUTPUT_DIR}${BAMFILE_NAME}_vep_annH.html" "$snpEff_db" "$vcfFile" > "${OUTPUT_DIR}${BAMFILE_NAME}_vep_annH.sift.vcf"
-						ACTIVE_FILTER=$(get_active_filter "$filterOptionsA" "VEP")
-						echo "java -Xmx8g -jar "$snpSift" filter "'$ACTIVE_FILTER'" "$vcfFile" > "${OUTPUT_DIR}${BAMFILE_NAME}_vep_annH.sift.vcf""
-						java -Xmx8g -jar "$snpSift" filter "'$ACTIVE_FILTER'" "$vcfFile" > "${OUTPUT_DIR}${BAMFILE_NAME}_vep_annH.sift.vcf"
+						echo "Annotating GERMLINE variant: $filename"
 						
+						ACTIVE_FILTER=$(get_active_filter "$filterOptionsA" "VEP")
+						# 1. Count raw variants before filtering
+                    	RAW_COUNT=$(grep -vc "^#" "$vcfFile")
+						
+						# --- STEP A: INLINE ANNOTATION ---
+						ANNOT_VCF="${OUTPUT_DIR}${BAMFILE_NAME}_vep_annH.annot.vcf"
+						if [ -n "$SNPSIFT_DBS" ]; then
+							CURRENT_INPUT="$vcfFile"
+							STEP_NUM=1
+
+							for db in $SNPSIFT_DBS; do
+								echo "Running SnpSift annotate with DB: $db"
+							
+								# Unique temporary output for each database pass
+								TMP_OUT="${OUTPUT_DIR}${BAMFILE_NAME}_tmp_pass_${STEP_NUM}.vcf"
+								echo "Running command: java -Xmx4g -jar $snpSift annotate -tabix $db $CURRENT_INPUT > $TMP_OUT"
+								java -Xmx4g -jar "$snpSift" annotate -tabix "$db" "$CURRENT_INPUT" > "$TMP_OUT"
+							
+								# Check if SnpSift succeeded AND created a non-empty output
+								if [ $? -ne 0 ] || [ ! -s "$TMP_OUT" ]; then
+									echo "Error: SnpSIFT Annotation failed or produced empty file for $BAMFILE_NAME on DB $db"
+									rm -f "$TMP_OUT"
+									exit 1
+								fi
+
+								# Remove previous pass temporary file (unless it was the original input)
+								if [ "$CURRENT_INPUT" != "$vcfFile" ]; then
+									rm -f "$CURRENT_INPUT"
+								fi
+
+								# Advance input to the newly created VCF pass
+								CURRENT_INPUT="$TMP_OUT"
+								STEP_NUM=$((STEP_NUM + 1))
+							done
+						
+							# Move the final non-empty pass to your target annotated VCF name
+							mv "$CURRENT_INPUT" "$ANNOT_VCF"
+						else
+							echo "No annotation databases provided. Skipping SnpSift annotate stage..."
+							cp "$vcfFile" "$ANNOT_VCF"
+						fi
+
+						# --- STEP B: FILTER ANNOTATED VCF ---
+						echo "java -Xmx4g -jar $snpSift filter $ACTIVE_FILTER $ANNOT_VCF > ${OUTPUT_DIR}${BAMFILE_NAME}_vep_annH.sift.vcf"
+						java -Xmx4g -jar "$snpSift" filter "$ACTIVE_FILTER" "$ANNOT_VCF" > "${OUTPUT_DIR}${BAMFILE_NAME}_vep_annH.sift.vcf"
 						if [ $? -ne 0 ]; then
 							echo "Error: SnpSIFT failed for $BAMFILE_NAME"
 							exit 1
 						else
+							# 2. Count variants after filtering
+                        	OUT_VCF="${OUTPUT_DIR}${BAMFILE_NAME}_vep_annH.sift.vcf"
+                        	FILTERED_COUNT=$(grep -vc "^#" "$OUT_VCF")
+                        	REMOVED_COUNT=$((RAW_COUNT - FILTERED_COUNT))
+                        	RETENTION_PCT="0.00"
+                        	if [ "$RAW_COUNT" -gt 0 ]; then
+                            	RETENTION_PCT=$(awk -v f="$FILTERED_COUNT" -v r="$RAW_COUNT" 'BEGIN {printf "%.2f", (f/r)*100}')
+                       	 	fi
+
+                        	# 3. Append counts to CSV log
+                        	echo "${BAMFILE_NAME},Germline_VEP,${RAW_COUNT},${FILTERED_COUNT},${REMOVED_COUNT},${RETENTION_PCT}\%" >> "$FILTER_LOG_FILE"
 							update_pipeline_status "$BAMFILE_NAME" "SnpSIFT(VEP)_H"
+							rm -f "$ANNOT_VCF"
 						fi
 						
 					fi
@@ -2361,17 +2987,71 @@ elif [ "$variantFilterationOp" = "BA" ]; then
 						echo "$BAMFILE_NAME: SnpSIFT(snpEff)_M already done. Skipping SNPSIFT..."
 					elif [ "$germSomaticOP" = "SOMATIC" ] || [ "$germSomaticOP" = "BOTH" ]; then
 						echo "Annotating SOMATIC variant (EXON): $filename"
-						#CorrectionDone
-						#java -Xmx8g -jar "$snpEff_path" -q -canon -csvStats "${OUTPUT_DIR}${BAMFILE_NAME}.annM.csv" -stats "${OUTPUT_DIR}${BAMFILE_NAME}.annM.html" "$snpEff_db" "$vcfFile" > "${OUTPUT_DIR}${BAMFILE_NAME}.annM.sift.vcf"
+						
 						ACTIVE_FILTER=$(get_active_filter "$filterOptionsA" "SNPEFF")
-						echo "java -Xmx8g -jar "$snpSift" filter "'$ACTIVE_FILTER'" "$vcfFile" > "${OUTPUT_DIR}${BAMFILE_NAME}.annM.sift.vcf""
-						java -Xmx8g -jar "$snpSift" filter "'$ACTIVE_FILTER'" "$vcfFile" > "${OUTPUT_DIR}${BAMFILE_NAME}.annM.sift.vcf"   
+						# 1. Count raw variants before filtering
+                    	RAW_COUNT=$(grep -vc "^#" "$vcfFile")
+						
+						# --- STEP A: INLINE ANNOTATION ---
+						ANNOT_VCF="${OUTPUT_DIR}${BAMFILE_NAME}.annM.annot.vcf"
+						
+						if [ -n "$SNPSIFT_DBS" ]; then
+							CURRENT_INPUT="$vcfFile"
+							STEP_NUM=1
+							for db in $SNPSIFT_DBS; do
+							echo "Running SnpSift annotate with DB: $db"
+							
+							# Unique temporary output for each database pass
+							TMP_OUT="${OUTPUT_DIR}${BAMFILE_NAME}_tmp_pass_${STEP_NUM}.vcf"
+							echo "Running command: java -Xmx4g -jar $snpSift annotate -tabix $db $CURRENT_INPUT > $TMP_OUT"
+							java -Xmx4g -jar "$snpSift" annotate -tabix "$db" "$CURRENT_INPUT" > "$TMP_OUT"
+							
+							# Check if SnpSift succeeded AND created a non-empty output
+							if [ $? -ne 0 ] || [ ! -s "$TMP_OUT" ]; then
+								echo "Error: SnpSIFT Annotation failed or produced empty file for $BAMFILE_NAME on DB $db"
+								rm -f "$TMP_OUT"
+								exit 1
+							fi
+
+							# Remove previous pass temporary file (unless it was the original input)
+							if [ "$CURRENT_INPUT" != "$vcfFile" ]; then
+								rm -f "$CURRENT_INPUT"
+							fi
+
+							# Advance input to the newly created VCF pass
+							CURRENT_INPUT="$TMP_OUT"
+							STEP_NUM=$((STEP_NUM + 1))
+						done
+						
+						# Move the final non-empty pass to your target annotated VCF name
+						mv "$CURRENT_INPUT" "$ANNOT_VCF"
+					else
+						echo "No annotation databases provided. Skipping SnpSift annotate stage..."
+						cp "$vcfFile" "$ANNOT_VCF"
+					fi
+							
+						# --- STEP B: FILTER ANNOTATED VCF ---
+						echo "java -Xmx8g -jar $snpSift filter $ACTIVE_FILTER $ANNOT_VCF > ${OUTPUT_DIR}${BAMFILE_NAME}.annM.sift.vcf"
+						java -Xmx8g -jar "$snpSift" filter "$ACTIVE_FILTER" "$ANNOT_VCF" > "${OUTPUT_DIR}${BAMFILE_NAME}.annM.sift.vcf"
 						
 						if [ $? -ne 0 ]; then
 							echo "Error: SnpSIFT failed for $BAMFILE_NAME"
 							exit 1
 						else
+							# 2. Count variants after filtering
+                        	OUT_VCF="${OUTPUT_DIR}${BAMFILE_NAME}.annM.sift.vcf"
+                        	FILTERED_COUNT=$(grep -vc "^#" "$OUT_VCF")
+                        	REMOVED_COUNT=$((RAW_COUNT - FILTERED_COUNT))
+                        
+                        	RETENTION_PCT="0.00"
+                        	if [ "$RAW_COUNT" -gt 0 ]; then
+                            	RETENTION_PCT=$(awk -v f="$FILTERED_COUNT" -v r="$RAW_COUNT" 'BEGIN {printf "%.2f", (f/r)*100}')
+                        	fi
+
+                        	# 3. Append counts to CSV log
+                        	echo "${BAMFILE_NAME},Somatic_SnpEff,${RAW_COUNT},${FILTERED_COUNT},${REMOVED_COUNT},${RETENTION_PCT}\%" >> "$FILTER_LOG_FILE"
 							update_pipeline_status "$BAMFILE_NAME" "SnpSIFT(snpEff)_M"
+							rm -f "$ANNOT_VCF"
 						fi
 						
 					fi
@@ -2382,19 +3062,72 @@ elif [ "$variantFilterationOp" = "BA" ]; then
 						# If both sample and stage exist in the file
 						echo "$BAMFILE_NAME: SnpSIFT(snpEff)_H already done. Skipping SNPSIFT..."
 					elif [ "$germSomaticOP" = "GERMLINE" ] || [ "$germSomaticOP" = "BOTH" ]; then
-						echo "Annotating SOMATIC variant (EXON): $filename"
-						#CorrectionDone
-						#java -Xmx8g -jar "$snpEff_path" -q -canon -csvStats "${OUTPUT_DIR}${BAMFILE_NAME}.annH.csv" -stats "${OUTPUT_DIR}${BAMFILE_NAME}.annH.html" "$snpEff_db" "$vcfFile" > "${OUTPUT_DIR}${BAMFILE_NAME}.annH.sift.vcf"
-						ACTIVE_FILTER=$(get_active_filter "$filterOptionsA" "SNPEFF")
-						echo "java -Xmx8g -jar "$snpSift" filter "'$ACTIVE_FILTER'" "$vcfFile" > "${OUTPUT_DIR}${BAMFILE_NAME}.annH.sift.vcf""
-						java -Xmx8g -jar "$snpSift" filter "'$ACTIVE_FILTER'" "$vcfFile" > "${OUTPUT_DIR}${BAMFILE_NAME}.annH.sift.vcf"
+						echo "Annotating GERMLINE variant: $filename"
 						
+						ACTIVE_FILTER=$(get_active_filter "$filterOptionsA" "SNPEFF")
+						
+						# 1. Count raw variants before filtering
+                    	RAW_COUNT=$(grep -vc "^#" "$vcfFile")
+						
+						# --- STEP A: INLINE ANNOTATION ---
+						ANNOT_VCF="${OUTPUT_DIR}${BAMFILE_NAME}.annH.annot.vcf"
+				
+						if [ -n "$SNPSIFT_DBS" ]; then
+							CURRENT_INPUT="$vcfFile"
+							STEP_NUM=1
+
+							for db in $SNPSIFT_DBS; do
+								echo "Running SnpSift annotate with DB: $db"
+							
+								# Unique temporary output for each database pass
+								TMP_OUT="${OUTPUT_DIR}${BAMFILE_NAME}_tmp_pass_${STEP_NUM}.vcf"
+								echo "Running command: java -Xmx4g -jar $snpSift annotate -tabix $db $CURRENT_INPUT > $TMP_OUT"
+								java -Xmx4g -jar "$snpSift" annotate -tabix "$db" "$CURRENT_INPUT" > "$TMP_OUT"
+							
+								# Check if SnpSift succeeded AND created a non-empty output
+								if [ $? -ne 0 ] || [ ! -s "$TMP_OUT" ]; then
+									echo "Error: SnpSIFT Annotation failed or produced empty file for $BAMFILE_NAME on DB $db"
+									rm -f "$TMP_OUT"
+									exit 1
+								fi
+
+								# Remove previous pass temporary file (unless it was the original input)
+								if [ "$CURRENT_INPUT" != "$vcfFile" ]; then
+									rm -f "$CURRENT_INPUT"
+								fi
+
+								# Advance input to the newly created VCF pass
+								CURRENT_INPUT="$TMP_OUT"
+								STEP_NUM=$((STEP_NUM + 1))
+							done
+						
+						# Move the final non-empty pass to your target annotated VCF name
+						mv "$CURRENT_INPUT" "$ANNOT_VCF"
+					else
+						echo "No annotation databases provided. Skipping SnpSift annotate stage..."
+						cp "$vcfFile" "$ANNOT_VCF"
+					fi
+						
+						# --- STEP B: FILTER ANNOTATED VCF ---
+						echo "java -Xmx4g -jar $snpSift filter $ACTIVE_FILTER $ANNOT_VCF > ${OUTPUT_DIR}${BAMFILE_NAME}.annH.sift.vcf"
+						java -Xmx4g -jar "$snpSift" filter "$ACTIVE_FILTER" "$ANNOT_VCF" > "${OUTPUT_DIR}${BAMFILE_NAME}.annH.sift.vcf"
 						if [ $? -ne 0 ]; then
 							echo "Error: SnpSIFT failed for $BAMFILE_NAME"
 							exit 1
 						else
+							# 2. Count variants after filtering
+	                        OUT_VCF="${OUTPUT_DIR}${BAMFILE_NAME}.annH.sift.vcf"
+    	                    FILTERED_COUNT=$(grep -vc "^#" "$OUT_VCF")
+        	                REMOVED_COUNT=$((RAW_COUNT - FILTERED_COUNT))
+            	            RETENTION_PCT="0.00"
+                        	if [ "$RAW_COUNT" -gt 0 ]; then
+                            	RETENTION_PCT=$(awk -v f="$FILTERED_COUNT" -v r="$RAW_COUNT" 'BEGIN {printf "%.2f", (f/r)*100}')
+                        	fi
+                	        # 3. Append counts to CSV log
+                    	    echo "${BAMFILE_NAME},Germline_SnpEff,${RAW_COUNT},${FILTERED_COUNT},${REMOVED_COUNT},${RETENTION_PCT}\%" >> "$FILTER_LOG_FILE"
 							update_pipeline_status "$BAMFILE_NAME" "SnpSIFT(snpEff)_H"
-							
+							echo "Removing temporary intermediate annotated file $ANNOT_VCF"
+							rm -f "$ANNOT_VCF"
 						fi
 						
 					fi
@@ -2404,8 +3137,8 @@ elif [ "$variantFilterationOp" = "BA" ]; then
 
 		fi
 	done
-	echo "++++++++++++++++++++++++++++++++++++ VariantFiltration AFTER COMPLETED +++++++++++++++++++++++++++++++++++++++++"
-
+	
+	echo "++++++++++++++++++++++++++++++++++++ SnpSIFT Annotation & Filtration  COMPLETED +++++++++++++++++++++++++++++++++++++++++"
 
 
 	##################################
@@ -2414,6 +3147,11 @@ elif [ "$variantFilterationOp" = "BA" ]; then
 
 fi
 #variantFilterationOp-END
+
+
+
+
+
 
 #Create VCF 
 #SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"

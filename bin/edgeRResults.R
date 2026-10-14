@@ -67,12 +67,23 @@ setwd(file.path(myargs[1], "EdgeRResults"))
 
 
 if(type == "exactTest"){
-
+ 
+  # 1. Check available group levels in DGEList object 'y'
+  actual_levels <- levels(y$samples$group)
+  print(actual_levels)
+  # 3. Validate that both levels exist before calling exactTest
+  if(!all(c(value1, value2) %in% actual_levels)) {
+    stop(sprintf(
+      "\n[ERROR in exactTest]: Provided pair levels ('%s', '%s') do not match 'y$samples$group' levels.\nAvailable levels in 'y$samples$group': %s\n",
+      value1, value2, paste(actual_levels, collapse = ", ")
+    ), call. = FALSE)
+  }
+ 
   #Classical approach to make pairwise comparison between groups
   #Will find DE gene expressed in value2 vs value1
   cat("\nRunning exactTest(",value1,value2,") to find genes DE in ",value2," vs ",value1," ...")
   dgeTest <- exactTest(y,pair = c(value1,value2)) #Names
-  #fileName<-"exactTest.csv"
+  
 fileName <- paste0("exactTest_", value2, "_vs_", value1, ".csv")
 plotFile <- paste0("MAPlot_exactTest_", value2, "_vs_", value1, ".png")
 gseaFile <- paste0("gsea_geneList_exactTest_", value2, "_vs_", value1, ".RDS")
@@ -146,27 +157,49 @@ cat("\n Running glmQLFit+glmQLFTest(coef)...\n ")
   split_parts <- strsplit(unlist(strsplit(value1, ",")), ":")
   
   # Step 2: Create named vector
-  contrast_named <- sapply(split_parts, function(x) as.numeric(x[2]))
-  names(contrast_named) <- sapply(split_parts, function(x) x[1])
+  contrast_named <- sapply(split_parts, function(x) as.numeric(trimws(x[2])))
+  names(contrast_named) <- sapply(split_parts, function(x) trimws(x[1]))
   
   # Step 3: Match order to design matrix columns
   design_cols <- colnames(design)
   contrast <- numeric(length(design_cols))
   names(contrast) <- design_cols
   
+  for (k in seq_along(contrast_named)) {
+    in_name <- names(contrast_named)[k]
+    val <- contrast_named[k]
+    
+    # Exact match or match with group prefix
+    idx <- which(design_cols == in_name | design_cols == paste0("group", in_name))
+    if (length(idx) > 0) {
+      contrast[idx[1]] <- val
+    }
+  }
+  
   # Fill in values from user input
-  matching <- intersect(names(contrast_named), names(contrast))
-  contrast[matching] <- contrast_named[matching]
+  #matching <- intersect(names(contrast_named), names(contrast))
+  #contrast[matching] <- contrast_named[matching]
+  # Step 4: Normalize weights so positive sum = 1 and negative sum = -1 (e.g., -0.5, -0.5, 0.5, 0.5)
+  pos_idx <- contrast > 0
+  neg_idx <- contrast < 0
+  if (sum(pos_idx) > 0) contrast[pos_idx] <- contrast[pos_idx] / sum(contrast[pos_idx])
+  if (sum(neg_idx) > 0) contrast[neg_idx] <- contrast[neg_idx] / abs(sum(contrast[neg_idx]))
+  
+  # Validate contrast mathematical validity
+  if (all(contrast == 0)) {
+    stop("[CRITICAL ERROR]: Contrast vector contains all zeros. None of the provided group names matched the design matrix columns!")
+  }
+  if (abs(sum(contrast)) > 1e-5) {
+    warning("[WARNING]: Contrast weights do not sum to 0. Make sure you are testing a group comparison rather than absolute expression.")
+  }
   
   # Print and test
-  cat("Using contrast vector:\n")
+  cat("\nFinal Normalized Contrast Vector used for edgeR:\n")
   print(contrast)
   
   
   #########
-    # Convert the comma-separated string into a numeric vector
-  #contrast <- as.numeric(unlist(strsplit(value1, ",")))
-  #cat("Using contrast vector: ", paste(contrast, collapse = ", "), "\n")
+   
   # Validate contrast length
   if (length(contrast) != ncol(design)) {
     stop(sprintf(
@@ -192,7 +225,7 @@ cat("\n Running glmQLFit+glmQLFTest(coef)...\n ")
   fileName<-"glmQLFTest_contrast.csv"
   plotFile <- "glmQLFTest_contrast.png"
   gseaFile <- "gsea_geneList_QLFcontrast.RDS"
-  #write.table(res_df,"glmQLFTest_contrast.csv", row.names = FALSE,col.names = TRUE, sep = "\t")
+
 }else if(type =="glmFit+glmLRT(coef)"){
   cat("\n Running glmQLFit+glmFit+glmLRT(coef)...\n ")
   cat("\nRunning glmQLFit with robust=TRUE...\n")
@@ -234,25 +267,43 @@ cat("\n Running glmQLFit+glmQLFTest(coef)...\n ")
   coef_names <- colnames(design)
 
   # Convert the comma-separated string into a numeric vector
-  #contrast <- as.numeric(unlist(strsplit(value1, ",")))
   # Step 1: Split into key:value pairs
   split_parts <- strsplit(unlist(strsplit(value1, ",")), ":")
   
   # Step 2: Create named vector
-  contrast_named <- sapply(split_parts, function(x) as.numeric(x[2]))
-  names(contrast_named) <- sapply(split_parts, function(x) x[1])
+  contrast_named <- sapply(split_parts, function(x) as.numeric(trimws(x[2])))
+  names(contrast_named) <- sapply(split_parts, function(x) trimws(x[1]))
   
   # Step 3: Match order to design matrix columns
   design_cols <- colnames(design)
   contrast <- numeric(length(design_cols))
   names(contrast) <- design_cols
   
+  for (k in seq_along(contrast_named)) {
+    in_name <- names(contrast_named)[k]
+    val <- contrast_named[k]
+    
+    idx <- which(design_cols == in_name | design_cols == paste0("group", in_name))
+    if (length(idx) > 0) {
+      contrast[idx[1]] <- val
+    }
+  }
+  
+  pos_idx <- contrast > 0
+  neg_idx <- contrast < 0
+  if (sum(pos_idx) > 0) contrast[pos_idx] <- contrast[pos_idx] / sum(contrast[pos_idx])
+  if (sum(neg_idx) > 0) contrast[neg_idx] <- contrast[neg_idx] / abs(sum(contrast[neg_idx]))
+  
+  if (all(contrast == 0)) {
+    stop("[CRITICAL ERROR]: Contrast vector contains all zeros. None of the provided group names matched the design matrix columns!")
+  }
+  
   # Fill in values from user input
-  matching <- intersect(names(contrast_named), names(contrast))
-  contrast[matching] <- contrast_named[matching]
+  #matching <- intersect(names(contrast_named), names(contrast))
+  #contrast[matching] <- contrast_named[matching]
   
   # Print and test
-  cat("Using contrast vector:\n")
+  cat("\nFinal Normalized Contrast Vector used for edgeR:\n")
   print(contrast)
   
   
@@ -406,10 +457,8 @@ print(head(res_df[order(res_df$FDR), ]))
 deGenes <- res_df[which(res_df$significant == "Significant"),]
 print(sprintf("Total number of DE Genes Identified: %d",nrow(deGenes)))
 
-print("DE Genes:")
-print(deGenes)
-#write.table(deGenes, file = "DE_Genes.csv", row.names = FALSE, col.names = TRUE, sep = "\t", quote = FALSE)
-#cat(sprintf("Saved significant genes to: %s\n", "DE_Genes.csv"))
+print("Top 10 DE Genes:")
+print(head(deGenes,10))
 
 setwd(file.path(myargs[1]))
 saveRDS(deGenes, file = "degenesE.RDS")
